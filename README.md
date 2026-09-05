@@ -16,15 +16,32 @@ Apple Watch の文字盤に、リマインダーの上位2件を常時表示す�
 | `com.zzzjjj080.banmentask.watchkitapp.widget` | ウィジェット拡張。文字盤の描画 |
 | `group.com.zzzjjj080.banmentask` | App Group。Watch アプリ ⇄ ウィジェット拡張のデータ共有 |
 
-## いまの段階：v0（配管の疎通確認）
+## いまの段階：v2（EventKit 取り込み + 並べ替え → priority 保存）
 
-iPhone アプリで手打ちした2行が、Watch の文字盤に出るところまで。
-EventKit はまだ使わない。**ここが通れば残りは「入力元を差し替えるだけ」**になる。
+iPhone アプリが EventKit から対象リストの未完了リマインダーを読み、
+上位2件を Watch へ送る。アプリ内でドラッグ並べ替えすると、その順序が
+`priority`(1〜9) としてリマインダー本体に保存される。
 
 ```
-iPhone: 手打ち2行 ──WatchConnectivity──▶ Watch アプリ ──App Group──▶ ウィジェット拡張 ──▶ 文字盤
-                                              └─ WidgetCenter.reloadAllTimelines()
+純正リマインダー ──EventKit──▶ iPhone アプリ ──WatchConnectivity──▶ Watch アプリ ──App Group──▶ ウィジェット ──▶ 文字盤
+      ▲                          │ ドラッグ並べ替え                      └─ WidgetCenter.reloadAllTimelines()
+      └──── priority 1〜9 を保存 ─┘
 ```
+
+**並び順のルール**
+
+- priority 1〜9 の項目を昇順で先頭に、0（未設定）は作成日順で後ろ
+- 純正アプリで新規追加 → priority 0 → 自動的に末尾へ
+- 自作アプリでドラッグ → 先頭から 1,2,3… を書き込み。10件目以降は 0 に戻す
+- 純正アプリ側では「!!!」「!!」「!」として見える（1〜4 / 5 / 6〜9）
+
+**更新のタイミング（v2 時点）**
+
+- アプリを開いた時（`scenePhase == .active`）
+- アプリが前面にいる間に純正側で変更があった時（`EKEventStoreChanged`）
+- 上位2件が変わった時だけ Watch へ送る。1日50回の転送枠を守るため
+
+アプリを閉じている間の変更は、次に開くまで文字盤に反映されない。裏更新は v3。
 
 ## セットアップ
 
@@ -88,12 +105,21 @@ iPhone の 設定 → デベロッパ → **Widget Developer Mode を ON**。
 
 ## ロードマップ
 
-| 版 | 内容 | 依存 |
+| 版 | 内容 | 状態 |
 |---|---|---|
-| **v0** | 手打ち2行を文字盤に出す。配管の疎通 | なし ← いまここ |
-| v1 | iOS 側で EventKit から「基本」の先頭2件を取得して送る。アプリを開いた時だけ更新 | なし |
-| v2 | 並び順を `priority`(1〜9) に焼く。iOS アプリにドラッグ並べ替え UI | `experiments/watch-complication` の R2 検証結果 |
-| v3 | `EKEventStoreChanged` + BGAppRefreshTask で裏更新。Watch から完了操作 | なし |
+| v0 | 手打ち2行を文字盤に出す。配管の疎通 | 実装済み（実機未確認） |
+| v1 | EventKit から対象リストの先頭2件を取得して送る | 実装済み（実機未確認） |
+| v2 | 並び順を `priority`(1〜9) に焼く。ドラッグ並べ替え UI。リスト切替 | 実装済み（実機未確認） |
+| v3 | BGAppRefreshTask で裏更新。Watch から完了操作 | 未着手 |
+
+**検証の状態**（`../experiments/watch-complication/`）
+
+| # | 内容 | 結果 |
+|---|---|---|
+| R1 | 中間値 (2 など) を保存・再読込できるか | **合格**（2026-09-05） |
+| R2 | 純正アプリで編集した時に丸められないか | 未検証。不合格でも「編集した項目だけ順位が飛ぶ」程度の影響 |
+| R3 | iCloud 同期後も保たれるか | 未検証 |
+| R4 | 生の fetch 順が手動並び順と一致するか | 未確定（並べ替え前後で差が出ず） |
 
 ## 設計メモ
 
