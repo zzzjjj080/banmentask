@@ -27,5 +27,11 @@ struct WatchContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
+        .overlay(alignment: .bottomTrailing) {
+            Text(BuildInfo.marker)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .padding(4)
+        }
     }
 }

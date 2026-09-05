@@ -1,6 +1,12 @@
 import Foundation
 
 /// iOS / Watch / Widget の3ターゲットで共有する定数とモデル。
+/// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
+/// Watch アプリの画面と iPhone の状態欄に出る。文字盤には出さない。
+enum BuildInfo {
+    static let marker = "b3"
+}
+
 enum AppGroup {
     /// Certificates, Identifiers & Profiles で先に登録しておくこと。
     static let identifier = "group.com.zzzjjj080.banmentask"

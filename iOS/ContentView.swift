@@ -48,6 +48,7 @@ struct ContentView: View {
                     row("文字盤に配置済み", session.isComplicationEnabled)
                     LabeledContent("残り転送回数 / 日", value: "\(session.remainingTransfers)")
                     LabeledContent("結果", value: session.lastResult).font(.footnote)
+                    LabeledContent("iPhone 側ビルド", value: BuildInfo.marker)
                     Button("いますぐ Watch に送信") { send(force: true) }
                 }
             }
