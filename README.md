@@ -66,42 +66,30 @@ https://developer.apple.com/account/resources/identifiers/list/applicationGroup 
 
 Bundle ID 3つは Automatic signing に任せれば Xcode が勝手に作る。
 
-### 1. Team ID を入れる
-
-`project.yml` の `DEVELOPMENT_TEAM: XXXXXXXXXX` を自分の Team ID に置き換える。
-Xcode で署名を設定済みなら Build Settings → `DEVELOPMENT_TEAM` を検索すると10桁が見える。
-
-**これを入れないまま `xcodegen generate` を再実行すると、Xcode で設定した署名が消える。**
-
-### 2. プロジェクトを生成して開く
+### 1. 入れる（毎回これだけ）
 
 ```sh
-brew install xcodegen      # 初回のみ
 cd BanmenTask
-xcodegen generate
-open BanmenTask.xcodeproj
+./install.sh          # 生成 → ビルド → iPhone と Watch に入れる
+./install.sh watch    # Watch だけ入れ直したい時
 ```
 
-`project.yml` を編集したら `xcodegen generate` を再実行するだけ。`.xcodeproj` は追跡しない。
+iPhone と Watch が Mac と同じ Wi-Fi にいてロック解除済みなら、Xcode を開かずに両方入る。
+Team ID は `project.yml` に入っている。`.xcodeproj` は毎回生成し直すので追跡しない。
 
-#### xcodegen を使いたくない場合
+Xcode で開きたい時は `xcodegen generate && open BanmenTask.xcodeproj`。
 
-Xcode で File → New → Project → **watchOS → App** を選び、
-「Watch-only App」の**チェックを外して** iOS companion 付きで作る。
-その後 File → New → Target → **watchOS → Widget Extension** を追加。
-Bundle ID を上の表の通りに揃え、3ターゲットに App Group を付け、
-`Shared/` `iOS/` `Watch/` `WatchWidget/` のファイルを各ターゲットに放り込む。
-`Shared/` は3ターゲット全部に Target Membership を付けること。
+### 2. Watch 側の準備（初回だけ）
 
-### 3. 実機で動かす
-
-1. iPhone を Mac に繋ぎ、スキーム **BanmenTask** で iPhone に Run
-2. iPhone の Watch アプリ →「盤面タスク」が出たら Watch にインストール
-   （出ない場合は Watch アプリ → 一般 → 「Show app on Apple Watch」）
-3. Watch で文字盤を長押し → 編集 → コンプリケーション → 横長スロットに「盤面タスク」を置く
+1. Watch で文字盤を長押し → 編集 → コンプリケーション → **横長スロット**に「盤面タスク」
    - 対応文字盤：モジュラー / モジュラーコンパクト / インフォグラフ モジュラー
-4. iPhone の盤面タスクで2行を入力して「Watch に送信」
-5. 数秒〜数十秒で文字盤が変わる
+2. iPhone の盤面タスクを一度開いてリマインダーへのアクセスを許可
+
+### 3. 入れ替わったか確認する
+
+Watch で盤面タスクのアプリを開くと右下に `b4` のような印が出る。
+`Shared/TaskStore.swift` の `BuildInfo.marker` と同じなら最新。
+文字盤の表示が古いままなら、スロットを一度空にして置き直す。
 
 ### 4. 開発中の必須設定
 
