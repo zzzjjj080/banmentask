@@ -52,22 +52,15 @@ struct BanmenTaskWidgetView: View {
 
     /// 本命。モジュラー / インフォグラフ モジュラー の横長スロット。
     /// ヘッダ無し・2行構成。1件目を大きく、2件目を控えめに。
-    /// 2行とも同じフォントで、枠に入る最大サイズ。長い文言は縮めて1行に収める。
+    /// 2行を1つの Text にまとめて縮める。
+    /// 別々の Text にすると長い行だけ縮んでサイズが揃わないため、
+    /// 改行で繋いだ1つの Text に lineLimit(2) をかけ、長い方に合わせて両方を同じ倍率で縮める。
     private var rectangular: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            line(first)
-            if !entry.tasks.second.isEmpty {
-                line(entry.tasks.second)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-    }
-
-    private func line(_ text: String) -> some View {
-        Text(text)
+        let lines = [first, entry.tasks.second].filter { !$0.isEmpty }
+        return Text(lines.joined(separator: "\n"))
             .font(.system(size: 24, weight: .semibold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
+            .lineLimit(lines.count)
+            .minimumScaleFactor(0.4)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
