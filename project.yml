@@ -1,0 +1,109 @@
+# XcodeGen 定義。`xcodegen generate` で BanmenTask.xcodeproj を生成する。
+# Info.plist と .entitlements もここから自動生成されるので、手で書く必要はない。
+name: BanmenTask
+options:
+  bundleIdPrefix: com.zzzjjj080
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    # ★ Apple Developer の Team ID に置き換える（developer.apple.com/account → Membership details）
+    DEVELOPMENT_TEAM: XXXXXXXXXX
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.10"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    ENABLE_USER_SCRIPT_SANDBOXING: false
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  # ─────────────────────────── iOS 本体 ───────────────────────────
+  BanmenTask:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOS
+      - path: Shared
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleDisplayName: 盤面タスク
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # v1 で EventKit を使う時に必要。v0 では未使用だが先に入れておく。
+        NSRemindersFullAccessUsageDescription: 文字盤に表示するタスクを読み取るためにリマインダーへアクセスします
+    entitlements:
+      path: iOS/BanmenTask.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zzzjjj080.banmentask
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zzzjjj080.banmentask
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: false
+    dependencies:
+      - target: BanmenTaskWatch
+
+  # ─────────────────────────── Watch アプリ ───────────────────────────
+  BanmenTaskWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: Watch
+      - path: Shared
+    info:
+      path: Watch/Info.plist
+      properties:
+        CFBundleDisplayName: 盤面タスク
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.zzzjjj080.banmentask
+        WKWatchOnly: false
+    entitlements:
+      path: Watch/BanmenTaskWatch.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zzzjjj080.banmentask
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zzzjjj080.banmentask.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.zzzjjj080.banmentask
+        INFOPLIST_KEY_WKWatchOnly: false
+    dependencies:
+      - target: BanmenTaskWidget
+
+  # ─────────────────────────── ウィジェット拡張（＝コンプリケーション本体） ───────────────────────────
+  BanmenTaskWidget:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: WatchWidget
+      - path: Shared
+    info:
+      path: WatchWidget/Info.plist
+      properties:
+        CFBundleDisplayName: 盤面タスク
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: WatchWidget/BanmenTaskWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zzzjjj080.banmentask
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zzzjjj080.banmentask.watchkitapp.widget
+        TARGETED_DEVICE_FAMILY: "4"
+
+schemes:
+  BanmenTask:
+    build:
+      targets:
+        BanmenTask: all
+    run:
+      config: Debug

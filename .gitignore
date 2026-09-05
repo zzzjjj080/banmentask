@@ -1,0 +1,6 @@
+# XcodeGen が生成する。project.yml が正なので追跡しない
+*.xcodeproj
+xcuserdata/
+.DS_Store
+build/
+DerivedData/
