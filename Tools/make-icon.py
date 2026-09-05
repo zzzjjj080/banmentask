@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """アプリアイコンを生成する。黒背景に、文字盤のコンプリケーションと同じ「2行のタスク」。
 
-  python3 Tools/make-icon.py            bars 版（円＋バー。小さくても崩れない）
-  python3 Tools/make-icon.py text       text 版（実際の文言。文字盤の見た目そのまま）
+  python3 Tools/make-icon.py            text 版（既定。文字盤の見た目そのまま）
+  python3 Tools/make-icon.py bars       bars 版（円＋バー。小さくても崩れない）
 
 出力先: iOS/Assets.xcassets と Watch/Assets.xcassets の AppIcon（1024x1024）
 """
@@ -33,7 +33,7 @@ def render(variant):
         circle(d, left + 62, cy, r, color, int(20 * scale))
         x0 = left + 62 + r + 60
         if variant == "text":
-            label = "iPhone返送" if color == WHITE else "バット巻く"
+            label = "牛乳を買う" if color == WHITE else "電話する"
             # 右端に収まるまで縮める
             size = int(150 * scale)
             while size > 40:
@@ -60,7 +60,7 @@ def write_asset(img, xcassets_dir, platform):
               open(os.path.join(xcassets_dir, "Contents.json"), "w"), indent=2)
 
 if __name__ == "__main__":
-    variant = sys.argv[1] if len(sys.argv) > 1 else "bars"
+    variant = sys.argv[1] if len(sys.argv) > 1 else "text"
     img = render(variant)
     write_asset(img, os.path.join(ROOT, "iOS", "Assets.xcassets"), "ios")
     write_asset(img, os.path.join(ROOT, "Watch", "Assets.xcassets"), "watchos")
