@@ -4,6 +4,7 @@ import SwiftUI
 /// v0 では受信内容の確認用。v3 でここから完了操作を付ける。
 struct WatchContentView: View {
     @EnvironmentObject private var session: WatchSession
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -20,10 +21,23 @@ struct WatchContentView: View {
                         .foregroundStyle(index == 0 ? .primary : .secondary)
                 }
                 Spacer()
-                Text(session.tasks.updatedAt, style: .relative)
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
+                HStack {
+                    Text(session.tasks.updatedAt, style: .relative)
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    Button {
+                        session.requestRefresh()
+                    } label: {
+                        Image(systemName: session.isRefreshing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(session.isRefreshing)
+                }
             }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { session.requestRefresh() }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()

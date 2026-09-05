@@ -6,7 +6,6 @@ struct ContentView: View {
     @EnvironmentObject private var session: PhoneSession
     @StateObject private var source = ReminderSource()
     @Environment(\.scenePhase) private var scenePhase
-    @State private var lastSentLines: [String] = []
 
     var body: some View {
         NavigationStack {
@@ -67,21 +66,22 @@ struct ContentView: View {
             }
             .task { await source.requestAccess() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
+                switch phase {
+                case .active:
                     session.refresh()
                     Task { await source.reload() }
+                case .background:
+                    BackgroundRefresh.schedule()
+                default:
+                    break
                 }
             }
             .onChange(of: source.items) { _, _ in send(force: false) }
         }
     }
 
-    /// 上位2件が変わった時だけ送る（1日50回の転送枠を無駄にしない）
     private func send(force: Bool) {
-        let tasks = source.faceTasks
-        guard force || tasks.lines != lastSentLines else { return }
-        lastSentLines = tasks.lines
-        session.send(tasks)
+        session.sendIfChanged(source.faceTasks, force: force)
     }
 
     private func row(_ label: String, _ ok: Bool) -> some View {

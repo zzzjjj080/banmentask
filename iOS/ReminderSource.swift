@@ -28,7 +28,7 @@ final class ReminderSource: ObservableObject {
         }
     }
 
-    private static let listNameKey = "listName"
+    static let listNameKey = "listName"
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
     private var isCommitting = false
@@ -126,6 +126,31 @@ final class ReminderSource: ObservableObject {
             do { try store.commit() } catch { errorMessage = "commit 失敗: \(error.localizedDescription)" }
         }
         await reload()
+    }
+
+    // MARK: - 前面にいない時の取得（BGTask / App Intent / Watch からの要求）
+
+    /// 画面に依存せず、保存済みのリスト名から上位2件だけを取る。
+    /// 未許可なら nil。
+    static func fetchFaceTasks() async -> FaceTasks? {
+        guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return nil }
+        let store = EKEventStore()
+        let listName = UserDefaults.standard.string(forKey: listNameKey) ?? "基本"
+        guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
+        else { return nil }
+
+        let predicate = store.predicateForIncompleteReminders(
+            withDueDateStarting: nil, ending: nil, calendars: [calendar])
+        let reminders: [EKReminder] = await withCheckedContinuation { cont in
+            store.fetchReminders(matching: predicate) { cont.resume(returning: $0 ?? []) }
+        }
+        let items = reminders
+            .map { Item(id: $0.calendarItemIdentifier,
+                        title: $0.title ?? "",
+                        priority: $0.priority,
+                        created: $0.creationDate ?? .distantPast) }
+            .sorted(by: order)
+        return FaceTasks(lines: Array(items.prefix(2).map(\.title)), updatedAt: .now)
     }
 
     // MARK: - Watch へ送る内容

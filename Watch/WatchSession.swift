@@ -7,11 +7,31 @@ import WidgetKit
 @MainActor
 final class WatchSession: NSObject, ObservableObject {
     @Published var tasks = TaskStore.load()
+    @Published var isRefreshing = false
 
     override init() {
         super.init()
         WCSession.default.delegate = self
         WCSession.default.activate()
+    }
+
+    /// iPhone に「いまリマインダーを読み直して」と頼む。
+    /// iPhone アプリが起動していなくても裏で起こされて応答する。
+    func requestRefresh() {
+        let session = WCSession.default
+        guard session.activationState == .activated, session.isReachable else {
+            isRefreshing = false
+            return
+        }
+        isRefreshing = true
+        session.sendMessage(["request": "refresh"], replyHandler: { reply in
+            Task { @MainActor in
+                self.isRefreshing = false
+                if !reply.isEmpty { self.apply(reply) }
+            }
+        }, errorHandler: { _ in
+            Task { @MainActor in self.isRefreshing = false }
+        })
     }
 
     private func apply(_ payload: [String: Any]) {

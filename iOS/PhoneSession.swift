@@ -2,19 +2,33 @@ import Foundation
 import WatchConnectivity
 
 /// iPhone 側の WatchConnectivity。Watch へ FaceTasks を送る。
+/// バックグラウンド起動（BGTask / App Intent / Watch からのメッセージ）でも
+/// 同じインスタンスを使うため singleton にしている。
 @MainActor
 final class PhoneSession: NSObject, ObservableObject {
+    static let shared = PhoneSession()
+
     @Published var isPaired = false
     @Published var isWatchAppInstalled = false
     @Published var isComplicationEnabled = false
     @Published var remainingTransfers = 0
     @Published var lastResult = "未送信"
 
-    override init() {
+    private static let lastSentKey = "lastSentLines"
+
+    private override init() {
         super.init()
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
         WCSession.default.activate()
+    }
+
+    /// 上位2件が前回送信分と違う時だけ送る（1日50回の転送枠を守る）。
+    func sendIfChanged(_ tasks: FaceTasks, force: Bool) {
+        let last = UserDefaults.standard.stringArray(forKey: Self.lastSentKey) ?? []
+        guard force || tasks.lines != last else { return }
+        UserDefaults.standard.set(tasks.lines, forKey: Self.lastSentKey)
+        send(tasks)
     }
 
     /// 2経路で送る。
@@ -66,5 +80,20 @@ extension PhoneSession: WCSessionDelegate {
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         Task { @MainActor in refresh() }
+    }
+
+    /// Watch アプリからの「いま読み直して」要求。
+    /// iPhone アプリが起動していなくても、この呼び出しのために裏で起動される。
+    nonisolated func session(_ session: WCSession,
+                             didReceiveMessage message: [String: Any],
+                             replyHandler: @escaping ([String: Any]) -> Void) {
+        guard message["request"] as? String == "refresh" else {
+            replyHandler([:])
+            return
+        }
+        Task {
+            let tasks = await BackgroundRefresh.refreshAndSend(reason: "watch", force: false)
+            replyHandler(tasks?.payload ?? [:])
+        }
     }
 }

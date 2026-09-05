@@ -36,6 +36,9 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         # v1 で EventKit を使う時に必要。v0 では未使用だが先に入れておく。
         NSRemindersFullAccessUsageDescription: 文字盤に表示するタスクを読み取るためにリマインダーへアクセスします
+        # v3: バックグラウンド更新
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.zzzjjj080.banmentask.refresh]
     entitlements:
       path: iOS/BanmenTask.entitlements
       properties:
