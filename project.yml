@@ -47,6 +47,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zzzjjj080.banmentask
         TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUPPORTS_MACCATALYST: false
     dependencies:
       - target: BanmenTaskWatch
@@ -74,6 +75,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zzzjjj080.banmentask.watchkitapp
         TARGETED_DEVICE_FAMILY: "4"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.zzzjjj080.banmentask
         INFOPLIST_KEY_WKWatchOnly: false
     dependencies:
