@@ -12,48 +12,67 @@ final class PhoneSession: NSObject, ObservableObject {
     @Published var isWatchAppInstalled = false
     @Published var isComplicationEnabled = false
     @Published var remainingTransfers = 0
-    @Published var lastResult = "未送信"
+    @Published var lastResult: String {
+        didSet { UserDefaults.standard.set(lastResult, forKey: Self.lastResultKey) }
+    }
 
     private static let lastSentKey = "lastSentLines"
+    private static let lastResultKey = "lastResult"
 
     private override init() {
+        lastResult = UserDefaults.standard.string(forKey: Self.lastResultKey) ?? "未送信"
         super.init()
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
         WCSession.default.activate()
     }
 
+    /// 裏起動（オートメーション / BGTask）直後は activate() が終わっていないので、
+    /// 最大5秒待つ。ここを待たずに送ると「未接続」で捨てられる。
+    private func ensureActivated() async -> Bool {
+        let session = WCSession.default
+        if session.activationState != .activated { session.activate() }
+        for _ in 0..<50 where session.activationState != .activated {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        return session.activationState == .activated
+    }
+
     /// 上位2件が前回送信分と違う時だけ送る（1日50回の転送枠を守る）。
-    func sendIfChanged(_ tasks: FaceTasks, force: Bool) {
+    func sendIfChanged(_ tasks: FaceTasks, force: Bool, reason: String) async {
         let last = UserDefaults.standard.stringArray(forKey: Self.lastSentKey) ?? []
         guard force || tasks.lines != last else { return }
-        UserDefaults.standard.set(tasks.lines, forKey: Self.lastSentKey)
-        send(tasks)
+        if await send(tasks, reason: reason) {
+            UserDefaults.standard.set(tasks.lines, forKey: Self.lastSentKey)
+        }
     }
 
     /// 2経路で送る。
     /// - applicationContext: 「最新状態」を1つだけ保持し、Watch アプリ起動時に必ず届く
     /// - transferCurrentComplicationUserInfo: Watch アプリを裏で起こしてまで届ける（1日50回まで）
-    func send(_ tasks: FaceTasks) {
-        let session = WCSession.default
-        guard session.activationState == .activated else {
-            lastResult = "WCSession 未接続"
-            return
+    @discardableResult
+    func send(_ tasks: FaceTasks, reason: String) async -> Bool {
+        let stamp = Date.now.formatted(date: .omitted, time: .shortened)
+        guard await ensureActivated() else {
+            lastResult = "\(stamp) \(reason): WCSession 未接続（5秒待っても接続できず）"
+            return false
         }
+        let session = WCSession.default
         do {
             try session.updateApplicationContext(tasks.payload)
         } catch {
-            lastResult = "applicationContext 失敗: \(error.localizedDescription)"
+            lastResult = "\(stamp) \(reason): applicationContext 失敗 \(error.localizedDescription)"
         }
 
         if session.isComplicationEnabled {
             session.transferCurrentComplicationUserInfo(tasks.payload)
-            lastResult = "送信済み（コンプリケーション経由・残り \(session.remainingComplicationUserInfoTransfers) 回/日）"
+            lastResult = "\(stamp) \(reason): 送信済み（文字盤経由・残り \(session.remainingComplicationUserInfoTransfers) 回/日）"
         } else {
             session.transferUserInfo(tasks.payload)
-            lastResult = "送信済み（通常転送。文字盤に未配置のため即時性なし）"
+            lastResult = "\(stamp) \(reason): 送信済み（通常転送・文字盤に未配置）"
         }
         refresh()
+        return true
     }
 
     func refresh() {

@@ -46,9 +46,9 @@ struct ContentView: View {
                     row("Watch アプリ", session.isWatchAppInstalled)
                     row("文字盤に配置済み", session.isComplicationEnabled)
                     LabeledContent("残り転送回数 / 日", value: "\(session.remainingTransfers)")
-                    LabeledContent("結果", value: session.lastResult).font(.footnote)
+                    LabeledContent("最後の送信", value: session.lastResult).font(.footnote)
                     LabeledContent("iPhone 側ビルド", value: BuildInfo.marker)
-                    Button("いますぐ Watch に送信") { send(force: true) }
+                    Button("いますぐ Watch に送信") { send(force: true, reason: "手動") }
                 }
             }
             .environment(\.editMode, .constant(.active))   // 常にドラッグハンドルを出す
@@ -76,12 +76,13 @@ struct ContentView: View {
                     break
                 }
             }
-            .onChange(of: source.items) { _, _ in send(force: false) }
+            .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
         }
     }
 
-    private func send(force: Bool) {
-        session.sendIfChanged(source.faceTasks, force: force)
+    private func send(force: Bool, reason: String) {
+        let tasks = source.faceTasks
+        Task { await session.sendIfChanged(tasks, force: force, reason: reason) }
     }
 
     private func row(_ label: String, _ ok: Bool) -> some View {

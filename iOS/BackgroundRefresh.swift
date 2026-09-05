@@ -43,7 +43,7 @@ enum BackgroundRefresh {
     @discardableResult
     static func refreshAndSend(reason: String, force: Bool) async -> FaceTasks? {
         guard let tasks = await ReminderSource.fetchFaceTasks() else { return nil }
-        await PhoneSession.shared.sendIfChanged(tasks, force: force)
+        await PhoneSession.shared.sendIfChanged(tasks, force: force, reason: reason)
         return tasks
     }
 }

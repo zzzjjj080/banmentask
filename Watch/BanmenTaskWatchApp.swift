@@ -2,10 +2,10 @@ import SwiftUI
 
 @main
 struct BanmenTaskWatchApp: App {
-    // 起動と同時に WCSession を有効化する。
-    // iPhone からの transferCurrentComplicationUserInfo で裏起動された時も、
-    // ここで delegate が立つので受信できる。
-    @StateObject private var session = WatchSession()
+    // WCSession の有効化は ExtensionDelegate.applicationDidFinishLaunching で行う。
+    // 裏起動では Scene が作られないことがあり、ここの @StateObject だけでは遅い。
+    @WKApplicationDelegateAdaptor(ExtensionDelegate.self) private var delegate
+    @StateObject private var session = WatchSession.shared
 
     var body: some Scene {
         WindowGroup {

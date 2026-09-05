@@ -6,10 +6,12 @@ import WidgetKit
 /// 受信 → App Group に保存 → ウィジェットのタイムラインを再読込、の3つだけを担当する。
 @MainActor
 final class WatchSession: NSObject, ObservableObject {
+    static let shared = WatchSession()
+
     @Published var tasks = TaskStore.load()
     @Published var isRefreshing = false
 
-    override init() {
+    private override init() {
         super.init()
         WCSession.default.delegate = self
         WCSession.default.activate()
