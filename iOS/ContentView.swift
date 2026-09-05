@@ -1,32 +1,53 @@
 import SwiftUI
 
-/// v1/v2: EventKit から読んだリストを表示し、ドラッグで並べ替えると
-/// priority に焼き込まれ、上位2件が Watch へ送られる。
+/// 純正リマインダーの「文字盤向けフロントエンド」。
+/// 追加・完了・改名・並べ替えをここで行い、書き込み先は純正リマインダー。
+/// 上位2件が変わるたびに Watch へ送る。
 struct ContentView: View {
     @EnvironmentObject private var session: PhoneSession
     @StateObject private var source = ReminderSource()
     @Environment(\.scenePhase) private var scenePhase
 
+    @State private var newTitle = ""
+    @State private var renaming: ReminderSource.Item?
+    @State private var renameTitle = ""
+
     var body: some View {
         NavigationStack {
             List {
                 Section {
+                    HStack {
+                        Image(systemName: "plus.circle.fill").foregroundStyle(.tint)
+                        TextField("追加", text: $newTitle)
+                            .submitLabel(.done)
+                            .onSubmit(add)
+                    }
+
                     if source.items.isEmpty {
                         Text(source.accessGranted ? "未完了のタスクがありません" : "リマインダーへのアクセスを許可してください")
                             .foregroundStyle(.secondary)
                     }
                     ForEach(Array(source.items.enumerated()), id: \.element.id) { index, item in
                         HStack(spacing: 12) {
-                            Text("\(index + 1)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                                .frame(width: 20, alignment: .trailing)
+                            Button {
+                                Task { await source.complete(id: item.id) }
+                            } label: {
+                                Image(systemName: "circle")
+                                    .font(.title3)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.borderless)
+
                             Text(item.title)
                                 .fontWeight(index < 2 ? .semibold : .regular)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    renameTitle = item.title
+                                    renaming = item
+                                }
                             Spacer()
                             if index < 2 {
-                                Image(systemName: "applewatch")
-                                    .foregroundStyle(.tint)
+                                Image(systemName: "applewatch").foregroundStyle(.tint)
                             }
                         }
                     }
@@ -34,7 +55,7 @@ struct ContentView: View {
                         Task { await source.move(from: from, to: to) }
                     }
                 } header: {
-                    Text("上位2件が文字盤に出ます。ドラッグで並べ替え")
+                    Text("上位2件が文字盤に出ます。○で完了、タイトルで改名、ドラッグで並べ替え")
                 } footer: {
                     if let error = source.errorMessage {
                         Text(error).foregroundStyle(.red)
@@ -64,6 +85,19 @@ struct ContentView: View {
                     }
                 }
             }
+            .alert("タイトルを変更", isPresented: Binding(
+                get: { renaming != nil },
+                set: { if !$0 { renaming = nil } }
+            )) {
+                TextField("タイトル", text: $renameTitle)
+                Button("保存") {
+                    if let item = renaming {
+                        Task { await source.rename(id: item.id, title: renameTitle) }
+                    }
+                    renaming = nil
+                }
+                Button("キャンセル", role: .cancel) { renaming = nil }
+            }
             .task { await source.requestAccess() }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
@@ -78,6 +112,12 @@ struct ContentView: View {
             }
             .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
         }
+    }
+
+    private func add() {
+        let title = newTitle
+        newTitle = ""
+        Task { await source.add(title: title) }
     }
 
     private func send(force: Bool, reason: String) {

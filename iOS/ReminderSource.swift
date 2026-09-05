@@ -128,6 +128,51 @@ final class ReminderSource: ObservableObject {
         await reload()
     }
 
+    // MARK: - 編集（追加・完了・改名）。書き込み先は純正リマインダー
+
+    func add(title: String) async {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
+        else { return }
+        let reminder = EKReminder(eventStore: store)
+        reminder.title = trimmed
+        reminder.calendar = calendar
+        reminder.priority = 0   // 未設定 → 末尾に並ぶ。上に持っていくのはドラッグで
+        await write { try store.save(reminder, commit: true) }
+    }
+
+    func complete(id: String) async {
+        guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else { return }
+        reminder.isCompleted = true
+        await write { try store.save(reminder, commit: true) }
+    }
+
+    func rename(id: String, title: String) async {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let reminder = store.calendarItem(withIdentifier: id) as? EKReminder
+        else { return }
+        reminder.title = trimmed
+        await write { try store.save(reminder, commit: true) }
+    }
+
+    private func write(_ body: () throws -> Void) async {
+        isCommitting = true
+        defer { isCommitting = false }
+        do { try body() } catch { errorMessage = "保存失敗: \(error.localizedDescription)" }
+        await reload()
+    }
+
+    /// Watch からの完了要求。画面が無い状態で呼ばれるので自前のストアで処理する。
+    static func completeHeadless(id: String) -> Bool {
+        guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return false }
+        let store = EKEventStore()
+        guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else { return false }
+        reminder.isCompleted = true
+        do { try store.save(reminder, commit: true); return true } catch { return false }
+    }
+
     // MARK: - 前面にいない時の取得（BGTask / App Intent / Watch からの要求）
 
     /// 画面に依存せず、保存済みのリスト名から上位2件だけを取る。
@@ -150,12 +195,15 @@ final class ReminderSource: ObservableObject {
                         priority: $0.priority,
                         created: $0.creationDate ?? .distantPast) }
             .sorted(by: order)
-        return FaceTasks(lines: Array(items.prefix(2).map(\.title)), updatedAt: .now)
+        return faceTasks(from: items)
     }
 
     // MARK: - Watch へ送る内容
 
-    var faceTasks: FaceTasks {
-        FaceTasks(lines: Array(items.prefix(2).map(\.title)), updatedAt: .now)
+    var faceTasks: FaceTasks { Self.faceTasks(from: items) }
+
+    private static func faceTasks(from items: [Item]) -> FaceTasks {
+        let top = items.prefix(2)
+        return FaceTasks(lines: top.map(\.title), ids: top.map(\.id), updatedAt: .now)
     }
 }

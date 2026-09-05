@@ -3,13 +3,15 @@ import WatchConnectivity
 import WidgetKit
 
 /// Watch 側の WatchConnectivity。
-/// 受信 → App Group に保存 → ウィジェットのタイムラインを再読込、の3つだけを担当する。
+/// 受信 → App Group に保存 → ウィジェットのタイムラインを再読込。
+/// 加えて iPhone へ「読み直して」「これを完了して」を投げる。
 @MainActor
 final class WatchSession: NSObject, ObservableObject {
     static let shared = WatchSession()
 
     @Published var tasks = TaskStore.load()
-    @Published var isRefreshing = false
+    @Published var isBusy = false
+    @Published var lastError: String?
 
     private override init() {
         super.init()
@@ -20,19 +22,32 @@ final class WatchSession: NSObject, ObservableObject {
     /// iPhone に「いまリマインダーを読み直して」と頼む。
     /// iPhone アプリが起動していなくても裏で起こされて応答する。
     func requestRefresh() {
+        ask(["request": "refresh"])
+    }
+
+    /// iPhone に「この項目を完了して」と頼む。返事で次の上位2件が届く。
+    func complete(id: String) {
+        ask(["request": "complete", "id": id])
+    }
+
+    private func ask(_ message: [String: Any]) {
         let session = WCSession.default
         guard session.activationState == .activated, session.isReachable else {
-            isRefreshing = false
+            lastError = "iPhone に接続できません"
             return
         }
-        isRefreshing = true
-        session.sendMessage(["request": "refresh"], replyHandler: { reply in
+        isBusy = true
+        lastError = nil
+        session.sendMessage(message, replyHandler: { reply in
             Task { @MainActor in
-                self.isRefreshing = false
+                self.isBusy = false
                 if !reply.isEmpty { self.apply(reply) }
             }
-        }, errorHandler: { _ in
-            Task { @MainActor in self.isRefreshing = false }
+        }, errorHandler: { error in
+            Task { @MainActor in
+                self.isBusy = false
+                self.lastError = error.localizedDescription
+            }
         })
     }
 

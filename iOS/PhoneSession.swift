@@ -106,13 +106,20 @@ extension PhoneSession: WCSessionDelegate {
     nonisolated func session(_ session: WCSession,
                              didReceiveMessage message: [String: Any],
                              replyHandler: @escaping ([String: Any]) -> Void) {
-        guard message["request"] as? String == "refresh" else {
-            replyHandler([:])
-            return
-        }
         Task {
-            let tasks = await BackgroundRefresh.refreshAndSend(reason: "watch", force: false)
-            replyHandler(tasks?.payload ?? [:])
+            switch message["request"] as? String {
+            case "refresh":
+                let tasks = await BackgroundRefresh.refreshAndSend(reason: "watch", force: false)
+                replyHandler(tasks?.payload ?? [:])
+            case "complete":
+                if let id = message["id"] as? String {
+                    _ = await ReminderSource.completeHeadless(id: id)
+                }
+                let tasks = await BackgroundRefresh.refreshAndSend(reason: "watch完了", force: true)
+                replyHandler(tasks?.payload ?? [:])
+            default:
+                replyHandler([:])
+            }
         }
     }
 }

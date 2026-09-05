@@ -1,43 +1,60 @@
 import SwiftUI
 
-/// Watch アプリ本体。文字盤からタップした時に開く画面。
-/// v0 では受信内容の確認用。v3 でここから完了操作を付ける。
+/// 文字盤のコンプリケーションをタップすると開く画面。
+/// 開いた瞬間に iPhone へ問い合わせて最新化し、○で完了できる。
 struct WatchContentView: View {
     @EnvironmentObject private var session: WatchSession
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             if session.tasks.lines.isEmpty {
-                Text("まだ何も届いていません")
+                Text("タスクなし")
+                    .font(.headline)
                     .foregroundStyle(.secondary)
-                Text("iPhone の盤面タスクから送信してください")
+                Text("iPhone の盤面タスクで追加してください")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
             } else {
                 ForEach(Array(session.tasks.lines.enumerated()), id: \.offset) { index, line in
-                    Text(line)
-                        .font(index == 0 ? .headline : .body)
-                        .foregroundStyle(index == 0 ? .primary : .secondary)
+                    let id = index < session.tasks.ids.count ? session.tasks.ids[index] : nil
+                    Button {
+                        if let id { session.complete(id: id) }
+                    } label: {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "circle")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                            Text(line)
+                                .font(index == 0 ? .headline : .body)
+                                .lineLimit(2)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(id == nil || session.isBusy)
                 }
-                Spacer()
-                HStack {
+            }
+
+            Spacer()
+
+            HStack {
+                if let error = session.lastError {
+                    Text(error).font(.footnote).foregroundStyle(.red).lineLimit(1)
+                } else {
                     Text(session.tasks.updatedAt, style: .relative)
                         .font(.footnote)
                         .foregroundStyle(.tertiary)
-                    Spacer()
-                    Button {
-                        session.requestRefresh()
-                    } label: {
-                        Image(systemName: session.isRefreshing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(session.isRefreshing)
                 }
+                Spacer()
+                Button {
+                    session.requestRefresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.plain)
+                .disabled(session.isBusy)
             }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { session.requestRefresh() }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
@@ -46,6 +63,9 @@ struct WatchContentView: View {
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .padding(4)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { session.requestRefresh() }
         }
     }
 }

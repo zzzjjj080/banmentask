@@ -4,7 +4,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// Watch アプリの画面と iPhone の状態欄に出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b6"
+    static let marker = "b7"
 }
 
 enum AppGroup {
@@ -15,7 +15,23 @@ enum AppGroup {
 /// 文字盤に出す内容。上位2件だけを持つ。
 struct FaceTasks: Codable, Equatable {
     var lines: [String]
+    /// lines と同じ並びの calendarItemIdentifier。Watch から完了する時に使う。
+    var ids: [String]
     var updatedAt: Date
+
+    init(lines: [String], ids: [String] = [], updatedAt: Date) {
+        self.lines = lines
+        self.ids = ids
+        self.updatedAt = updatedAt
+    }
+
+    /// 古い保存データ（ids なし）も読めるようにする
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        lines = try c.decode([String].self, forKey: .lines)
+        ids = try c.decodeIfPresent([String].self, forKey: .ids) ?? []
+        updatedAt = try c.decode(Date.self, forKey: .updatedAt)
+    }
 
     static let empty = FaceTasks(lines: [], updatedAt: .distantPast)
     static let placeholder = FaceTasks(lines: ["iPhone返送", "バットテープ巻く"], updatedAt: .now)
@@ -47,12 +63,13 @@ enum TaskStore {
 
 extension FaceTasks {
     var payload: [String: Any] {
-        ["lines": lines, "updatedAt": updatedAt.timeIntervalSince1970]
+        ["lines": lines, "ids": ids, "updatedAt": updatedAt.timeIntervalSince1970]
     }
 
     init?(payload: [String: Any]) {
         guard let lines = payload["lines"] as? [String] else { return nil }
+        let ids = payload["ids"] as? [String] ?? []
         let t = payload["updatedAt"] as? TimeInterval ?? Date.now.timeIntervalSince1970
-        self.init(lines: lines, updatedAt: Date(timeIntervalSince1970: t))
+        self.init(lines: lines, ids: ids, updatedAt: Date(timeIntervalSince1970: t))
     }
 }
