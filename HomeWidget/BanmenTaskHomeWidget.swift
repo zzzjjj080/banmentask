@@ -49,6 +49,18 @@ enum HomeReminders {
         reminder.isCompleted = true
         try? store.save(reminder, commit: true)
     }
+
+    /// 猶予（3秒）を過ぎたものを本当に完了させる。タイムライン生成とインテントの両方から呼ぶ。
+    static func settleExpired(now: Date = .now) {
+        var pending = PendingStore.load()
+        let expired = pending.filter { now.timeIntervalSince($0.value) >= PendingStore.grace }
+        guard !expired.isEmpty else { return }
+        for id in expired.keys {
+            complete(id: id)
+            pending[id] = nil
+        }
+        PendingStore.save(pending)
+    }
 }
 
 // MARK: - ○を押した時の動き（3秒後に完了。その間にもう一度押せば取り消し）
@@ -62,30 +74,18 @@ struct ToggleCompleteIntent: AppIntent {
     init() {}
     init(id: String) { self.id = id }
 
+    /// ウィジェットはインテントが終わるまで再描画しないので、ここでは待たずに即返す。
+    /// 3秒後の再描画（タイムラインの .after）で settleExpired が本当に完了させる。
     func perform() async throws -> some IntentResult {
+        HomeReminders.settleExpired()
         var pending = PendingStore.load()
         if pending[id] != nil {
-            // 猶予中にもう一度押した → 取り消し
-            pending[id] = nil
-            PendingStore.save(pending)
-            WidgetCenter.shared.reloadTimelines(ofKind: BanmenTaskHomeWidget.kind)
-            return .result()
+            pending[id] = nil            // 猶予中にもう一度押した → 取り消し
+        } else {
+            pending[id] = Date.now       // 猶予開始
         }
-        let pressedAt = Date.now
-        pending[id] = pressedAt
         PendingStore.save(pending)
-        WidgetCenter.shared.reloadTimelines(ofKind: BanmenTaskHomeWidget.kind)
-
-        try? await Task.sleep(for: .seconds(PendingStore.grace))
-
-        // 待っている間に取り消されていなければ完了
-        var latest = PendingStore.load()
-        guard latest[id] == pressedAt else { return .result() }
-        HomeReminders.complete(id: id)
-        latest[id] = nil
-        PendingStore.save(latest)
-        WidgetCenter.shared.reloadTimelines(ofKind: BanmenTaskHomeWidget.kind)
-        return .result()
+        return .result()                 // 返した直後に WidgetKit が再描画する
     }
 }
 
@@ -114,7 +114,8 @@ struct HomeProvider: TimelineProvider {
     }
 
     private func entry(for context: Context) -> HomeEntry {
-        let limit = context.family == .systemLarge ? 10 : 4
+        HomeReminders.settleExpired()
+        let limit = context.family == .systemLarge ? 9 : 3
         let listName = LayoutStore.listName
         return HomeEntry(date: .now, listName: listName,
                          items: HomeReminders.load(listName: listName, limit: limit),
@@ -130,7 +131,7 @@ struct HomeWidgetView: View {
     private var tint: Color { FaceStyle.color(entry.layout.reminderColor) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "applewatch")
                     .font(.system(size: 12, weight: .semibold))
@@ -173,6 +174,8 @@ struct HomeWidgetView: View {
                     }
                 }
                 .frame(width: 20, height: 20)
+                .frame(width: 32, height: 32)       // 当たり判定を広く
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -214,7 +217,6 @@ struct BanmenTaskHomeWidget: Widget {
         .configurationDisplayName("盤面タスク")
         .description("リマインダーをホーム画面から完了できます。○を押して3秒以内なら取り消せます。")
         .supportedFamilies([.systemMedium, .systemLarge])
-        .contentMarginsDisabled()
     }
 }
 
