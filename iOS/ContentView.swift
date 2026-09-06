@@ -57,24 +57,29 @@ struct ContentView: View {
                 addRow
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 4, trailing: 16))
+
+                sendButton
+                    .listRowBackground(bg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 6, trailing: 16))
             } footer: {
                 if let error = source.errorMessage {
                     Text(error).foregroundStyle(.red).font(.footnote)
                 }
             }
 
-            // ── Watch の状態 ──────────────────────────────────
+            // ── 文字盤プレビュー ──────────────────────────────
             Section {
-                statusGrid
+                watchMock
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
             }
 
-            // ── 文字盤プレビュー（一番下）─────────────────────
+            // ── その他の情報（接続・転送枠・最後の送信）─────────
             Section {
-                watchMock
+                statusGrid
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 32, trailing: 16))
@@ -308,6 +313,32 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - 時計に反映（手動送信・60秒クールダウン）
+
+    private var sendButton: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let left = Int(cooldownUntil.timeIntervalSince(context.date).rounded(.up))
+            let waiting = left > 0
+            Button {
+                Haptic.confirm()
+                cooldownUntil = Date.now.addingTimeInterval(cooldown)
+                send(force: true, reason: "手動")
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: waiting ? "hourglass" : "applewatch")
+                    Text(waiting ? "あと \(left) 秒" : "時計に反映")
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(waiting ? dim : .black)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(waiting ? Color(white: 0.14) : .white,
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(waiting)
+        }
+    }
+
     // MARK: - 接続の状態（iPhone → Watch → 文字盤 の経路として見せる）
 
     private var statusGrid: some View {
@@ -316,6 +347,11 @@ struct ContentView: View {
         let budget = 50.0
         let remaining = Double(session.remainingTransfers)
         return VStack(spacing: 18) {
+            Text("接続")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(dim)
+                .tracking(1.5)
+                .frame(maxWidth: .infinity, alignment: .leading)
             // 経路
             VStack(spacing: 10) {
                 HStack(spacing: 0) {
@@ -358,29 +394,6 @@ struct ContentView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(dim)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            // 手動送信（60秒クールダウン）
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                let left = Int(cooldownUntil.timeIntervalSince(context.date).rounded(.up))
-                let waiting = left > 0
-                Button {
-                    Haptic.confirm()
-                    cooldownUntil = Date.now.addingTimeInterval(cooldown)
-                    send(force: true, reason: "手動")
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: waiting ? "hourglass" : "arrow.up")
-                        Text(waiting ? "あと \(left) 秒" : "いま送る")
-                    }
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(waiting ? dim : .black)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(waiting ? Color(white: 0.14) : .white,
-                                in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .disabled(waiting)
             }
 
             Text(session.lastResult)
