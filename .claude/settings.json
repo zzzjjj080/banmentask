@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git pull*)",
+      "Bash(git fetch*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(./install.sh*)",
+      "Bash(xcodegen*)",
+      "Bash(xcodebuild*)",
+      "Bash(xcrun devicectl*)",
+      "Bash(python3 Tools/make-icon.py*)",
+      "Bash(swift experiments/watch-complication/ReminderProbe.swift*)"
+    ]
+  }
+}

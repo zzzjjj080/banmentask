@@ -141,7 +141,7 @@ iPhone の 設定 → デベロッパ → **Widget Developer Mode を ON**。
 | v3 | 裏更新3経路（ショートカット / Watch から問い合わせ / BGTask） | 実装済み・実機で動作確認 |
 | v4 | 盤面タスク内で追加・完了・改名。Watch から完了 | 実装済み（実機未確認） |
 
-**検証の状態**（`../experiments/watch-complication/`）
+**検証の状態**（`experiments/watch-complication/`）
 
 | # | 内容 | 結果 |
 |---|---|---|
@@ -153,7 +153,7 @@ iPhone の 設定 → デベロッパ → **Widget Developer Mode を ON**。
 ## 設計メモ
 
 - **並び順は EventKit から取れない**（純正の手動並べ替えは API 非公開）。
-  v2 で `priority` を順位の保存場所に流用する。検証ツールは `../experiments/watch-complication/`。
+  v2 で `priority` を順位の保存場所に流用する。検証ツールは `experiments/watch-complication/`。
 - ウィジェット拡張から直接 EventKit を叩かない。watchOS のウィジェット拡張は
   本体が許可済みでも `.denied` を返す既知の挙動があるため、iPhone 側で取得して Watch へ送る。
 - 転送は `updateApplicationContext`（最新状態の保持）と `transferCurrentComplicationUserInfo`

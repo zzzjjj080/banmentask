@@ -17,7 +17,7 @@
 ## 設計の要点
 
 - データは純正リマインダー（EventKit）。自前 DB は持たない
-- 並び順は `priority`(1〜9)。純正の手動並び順は API で取れない（検証済み: `../experiments/watch-complication/`）
+- 並び順は `priority`(1〜9)。純正の手動並び順は API で取れない（検証済み: `experiments/watch-complication/`）
 - iPhone → Watch は WatchConnectivity。`transferCurrentComplicationUserInfo` は1日50回まで。上位2件が変わった時だけ送る
 - 裏起動直後は WCSession の activate 完了を待ってから送る（`PhoneSession.ensureActivated`）
 - Watch 側は `ExtensionDelegate.applicationDidFinishLaunching` で WCSession を立てる
