@@ -2,39 +2,24 @@ import SwiftUI
 import WatchKit
 
 /// 文字盤のコンプリケーションをタップすると開く画面。
-/// 開いた瞬間に iPhone へ問い合わせて最新化し、○で完了できる。
+/// 開いた瞬間に iPhone へ問い合わせて最新化。リマインダーは○で完了、予定は時刻付きで表示。
 struct WatchContentView: View {
     @EnvironmentObject private var session: WatchSession
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        let items = FaceComposer.items(session.tasks, at: .now)
         VStack(alignment: .leading, spacing: 6) {
-            if session.tasks.lines.isEmpty {
-                Text("タスクなし")
+            if items.isEmpty {
+                Text(session.tasks.mode == .calendar ? "今日の予定なし" : "タスクなし")
                     .font(.headline)
                     .foregroundStyle(.secondary)
                 Text("iPhone の盤面タスクで追加してください")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
             } else {
-                ForEach(Array(session.tasks.lines.enumerated()), id: \.offset) { index, line in
-                    let id = index < session.tasks.ids.count ? session.tasks.ids[index] : nil
-                    Button {
-                        WKInterfaceDevice.current().play(.success)
-                        if let id { session.complete(id: id) }
-                    } label: {
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "circle")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                            Text(line)
-                                .font(index == 0 ? .headline : .body)
-                                .lineLimit(2)
-                            Spacer(minLength: 0)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(id == nil || session.isBusy)
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    row(item, index: index)
                 }
             }
 
@@ -69,6 +54,39 @@ struct WatchContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { session.requestRefresh() }
+        }
+    }
+
+    @ViewBuilder
+    private func row(_ item: FaceItem, index: Int) -> some View {
+        switch item.kind {
+        case .reminder:
+            Button {
+                WKInterfaceDevice.current().play(.success)
+                session.complete(id: item.id)
+            } label: {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "circle")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                    Text(item.title)
+                        .font(index == 0 ? .headline : .body)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(session.isBusy)
+        case .event:
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "clock")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                Text(item.displayText)
+                    .font(index == 0 ? .headline : .body)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+            }
         }
     }
 }

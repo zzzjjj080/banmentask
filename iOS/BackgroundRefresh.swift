@@ -41,8 +41,8 @@ enum BackgroundRefresh {
     /// EventKit を読み、上位2件を Watch へ送る。
     /// force=false なら前回送信分と同じ内容はスキップして転送枠を守る。
     @discardableResult
-    static func refreshAndSend(reason: String, force: Bool) async -> FaceTasks? {
-        guard let tasks = await ReminderSource.fetchFaceTasks() else { return nil }
+    static func refreshAndSend(reason: String, force: Bool) async -> FacePayload? {
+        guard let tasks = await ReminderSource.fetchFacePayload() else { return nil }
         await PhoneSession.shared.sendIfChanged(tasks, force: force, reason: reason)
         return tasks
     }

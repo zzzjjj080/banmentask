@@ -35,6 +35,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         # v1 で EventKit を使う時に必要。v0 では未使用だが先に入れておく。
         NSRemindersFullAccessUsageDescription: 文字盤に表示するタスクを読み取るためにリマインダーへアクセスします
+        NSCalendarsFullAccessUsageDescription: 今日のこれからの予定を文字盤に出すためにカレンダーを読み取ります
         # v3: バックグラウンド更新
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [com.zzzjjj080.banmentask.refresh]

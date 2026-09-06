@@ -1,7 +1,7 @@
 import Foundation
 import WatchConnectivity
 
-/// iPhone 側の WatchConnectivity。Watch へ FaceTasks を送る。
+/// iPhone 側の WatchConnectivity。Watch へ FacePayload を送る。
 /// バックグラウンド起動（BGTask / App Intent / Watch からのメッセージ）でも
 /// 同じインスタンスを使うため singleton にしている。
 @MainActor
@@ -16,7 +16,7 @@ final class PhoneSession: NSObject, ObservableObject {
         didSet { UserDefaults.standard.set(lastResult, forKey: Self.lastResultKey) }
     }
 
-    private static let lastSentKey = "lastSentLines"
+    private static let lastSentKey = "lastSentSignature"
     private static let lastResultKey = "lastResult"
 
     private override init() {
@@ -39,11 +39,11 @@ final class PhoneSession: NSObject, ObservableObject {
     }
 
     /// 上位2件が前回送信分と違う時だけ送る（1日50回の転送枠を守る）。
-    func sendIfChanged(_ tasks: FaceTasks, force: Bool, reason: String) async {
-        let last = UserDefaults.standard.stringArray(forKey: Self.lastSentKey) ?? []
-        guard force || tasks.lines != last else { return }
-        if await send(tasks, reason: reason) {
-            UserDefaults.standard.set(tasks.lines, forKey: Self.lastSentKey)
+    func sendIfChanged(_ payload: FacePayload, force: Bool, reason: String) async {
+        let last = UserDefaults.standard.string(forKey: Self.lastSentKey) ?? ""
+        guard force || payload.signature != last else { return }
+        if await send(payload, reason: reason) {
+            UserDefaults.standard.set(payload.signature, forKey: Self.lastSentKey)
         }
     }
 
@@ -51,7 +51,7 @@ final class PhoneSession: NSObject, ObservableObject {
     /// - applicationContext: 「最新状態」を1つだけ保持し、Watch アプリ起動時に必ず届く
     /// - transferCurrentComplicationUserInfo: Watch アプリを裏で起こしてまで届ける（1日50回まで）
     @discardableResult
-    func send(_ tasks: FaceTasks, reason: String) async -> Bool {
+    func send(_ tasks: FacePayload, reason: String) async -> Bool {
         let stamp = Date.now.formatted(date: .omitted, time: .shortened)
         guard await ensureActivated() else {
             lastResult = "\(stamp) \(reason): WCSession 未接続（5秒待っても接続できず）"

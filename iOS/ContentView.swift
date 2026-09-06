@@ -32,7 +32,11 @@ struct ContentView: View {
         List {
             // ── リスト切替 ────────────────────────────────────
             Section {
-                HStack { listMenu; Spacer() }
+                HStack {
+                    listMenu
+                    Spacer()
+                    modePicker
+                }
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
@@ -102,6 +106,13 @@ struct ContentView: View {
             }
         }
         .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
+        .onChange(of: source.events) { _, _ in send(force: false, reason: "予定") }
+        .onChange(of: source.mode) { _, mode in
+            if mode.usesCalendar && !source.calendarGranted {
+                Task { await source.requestCalendarAccess(); await source.reload() }
+            }
+            send(force: false, reason: "モード")
+        }
         // 編集中の行からフォーカスが外れたら確定
         .onChange(of: focusedID) { old, new in
             if let old, old != new { commitRename(old) }
@@ -135,11 +146,33 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - モード切替（文字盤の2行をどう埋めるか）
+
+    private var modePicker: some View {
+        HStack(spacing: 2) {
+            ForEach(FaceMode.allCases) { m in
+                Button {
+                    if source.mode != m { Haptic.select(); source.mode = m }
+                } label: {
+                    Text(m.label)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(source.mode == m ? .black : dim)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(source.mode == m ? Color.white : .clear, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2)
+        .background(Color(white: 0.16), in: Capsule())
+    }
+
     // MARK: - 文字盤プレビュー（一番下）
 
     private var watchMock: some View {
         VStack(spacing: 8) {
-            WatchMockView(lines: source.faceTasks.lines)
+            WatchMockView(lines: FaceComposer.lines(source.facePayload, at: .now))
             Text("時計ではこう見えます")
                 .font(.system(size: 12))
                 .foregroundStyle(dim)
@@ -149,9 +182,14 @@ struct ContentView: View {
 
     // MARK: - タスク行（タップでその場編集、○は3秒の猶予つき完了）
 
+    /// いま文字盤に出ているリマインダーの id
+    private var onFaceIDs: Set<String> {
+        Set(FaceComposer.items(source.facePayload, at: .now).filter { $0.kind == .reminder }.map(\.id))
+    }
+
     private func taskRow(index: Int, item: ReminderSource.Item) -> some View {
         let isPending = pending[item.id] != nil
-        let onFace = index < 2
+        let onFace = onFaceIDs.contains(item.id)
         return HStack(spacing: 14) {
             Button {
                 toggleComplete(item)
@@ -405,7 +443,7 @@ struct ContentView: View {
     }
 
     private func send(force: Bool, reason: String) {
-        let tasks = source.faceTasks
+        let tasks = source.facePayload
         Task { await session.sendIfChanged(tasks, force: force, reason: reason) }
     }
 }

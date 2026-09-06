@@ -52,7 +52,7 @@ final class WatchSession: NSObject, ObservableObject {
     }
 
     private func apply(_ payload: [String: Any]) {
-        guard let incoming = FaceTasks(payload: payload) else { return }
+        guard let incoming = FacePayload(payload: payload) else { return }
         TaskStore.save(incoming)
         tasks = incoming
         // ここが文字盤更新のトリガー。これを呼ばないと保存しても盤面は変わらない。

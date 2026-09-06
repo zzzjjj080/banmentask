@@ -1,8 +1,8 @@
 import Foundation
 import EventKit
 
-/// EventKit から「対象リスト」の未完了リマインダーを読み、
-/// 並び順を priority(1〜9) に焼き込む。
+/// EventKit から「対象リスト」の未完了リマインダーと、今日の予定を読み、
+/// 文字盤に送る FacePayload を組み立てる。並び順は priority(1〜9) に焼き込む。
 ///
 /// 並び順のルール:
 ///   priority 1〜9 の項目を昇順で先頭に、0（未設定）の項目は作成日順で後ろに置く。
@@ -18,8 +18,10 @@ final class ReminderSource: ObservableObject {
     }
 
     @Published private(set) var items: [Item] = []
+    @Published private(set) var events: [FaceItem] = []
     @Published private(set) var listNames: [String] = []
     @Published private(set) var accessGranted = false
+    @Published private(set) var calendarGranted = false
     @Published private(set) var errorMessage: String?
     @Published var listName: String {
         didSet {
@@ -27,15 +29,26 @@ final class ReminderSource: ObservableObject {
             Task { await reload() }
         }
     }
+    @Published var mode: FaceMode {
+        didSet {
+            UserDefaults.standard.set(mode.rawValue, forKey: Self.modeKey)
+            Task { await reload() }
+        }
+    }
 
     static let listNameKey = "listName"
+    static let modeKey = "faceMode"
+    /// 送るリマインダーの件数。文字盤は2行だが「1つずつ」で予定が無い時の埋め草に少し多めに
+    static let reminderCount = 3
+
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
     private var isCommitting = false
 
     init() {
         listName = UserDefaults.standard.string(forKey: Self.listNameKey) ?? "基本"
-        // 純正アプリ側の変更（完了・追加・編集）を拾って再読込する
+        mode = FaceMode(rawValue: UserDefaults.standard.string(forKey: Self.modeKey) ?? "") ?? .reminders
+        // 純正アプリ側の変更（完了・追加・編集・予定の変更）を拾って再読込する
         observer = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged, object: store, queue: .main
         ) { [weak self] _ in
@@ -59,7 +72,16 @@ final class ReminderSource: ObservableObject {
             errorMessage = "設定 → プライバシー → リマインダー で許可してください"
             return
         }
+        if mode.usesCalendar { await requestCalendarAccess() }
         await reload()
+    }
+
+    /// カレンダーは使うモードに切り替えた時に初めて聞く
+    func requestCalendarAccess() async {
+        calendarGranted = await EventSource.requestAccess(store)
+        if !calendarGranted {
+            errorMessage = "設定 → プライバシー → カレンダー で許可すると予定を出せます"
+        }
     }
 
     func reload() async {
@@ -85,6 +107,9 @@ final class ReminderSource: ObservableObject {
                         priority: $0.priority,
                         created: $0.creationDate ?? .distantPast) }
             .sorted(by: Self.order)
+
+        calendarGranted = EventSource.isAuthorized
+        events = mode.usesCalendar ? EventSource.todayUpcoming(store) : []
     }
 
     static func order(_ a: Item, _ b: Item) -> Bool {
@@ -96,8 +121,6 @@ final class ReminderSource: ObservableObject {
 
     // MARK: - 並べ替え → priority に保存
 
-    /// UI 上で並べ替えた結果を受け取り、先頭から priority 1,2,3… を書き込む。
-    /// 10件目以降は 0（未設定）に戻す。
     func move(from source: IndexSet, to destination: Int) async {
         items.move(fromOffsets: source, toOffset: destination)
         await commitOrder()
@@ -173,14 +196,24 @@ final class ReminderSource: ObservableObject {
         do { try store.save(reminder, commit: true); return true } catch { return false }
     }
 
-    // MARK: - 前面にいない時の取得（BGTask / App Intent / Watch からの要求）
+    // MARK: - Watch へ送る内容
 
-    /// 画面に依存せず、保存済みのリスト名から上位2件だけを取る。
-    /// 未許可なら nil。
-    static func fetchFaceTasks() async -> FaceTasks? {
+    var facePayload: FacePayload { Self.facePayload(mode: mode, items: items, events: events) }
+
+    private static func facePayload(mode: FaceMode, items: [Item], events: [FaceItem]) -> FacePayload {
+        let top = items.prefix(reminderCount).map {
+            FaceItem(id: $0.id, kind: .reminder, title: $0.title, start: nil)
+        }
+        return FacePayload(mode: mode, reminders: top, events: events, updatedAt: .now)
+    }
+
+    /// 画面に依存せず、保存済みの設定から組み立てる（BGTask / App Intent / Watch からの要求）。
+    /// リマインダー未許可なら nil。
+    static func fetchFacePayload() async -> FacePayload? {
         guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return nil }
         let store = EKEventStore()
         let listName = UserDefaults.standard.string(forKey: listNameKey) ?? "基本"
+        let mode = FaceMode(rawValue: UserDefaults.standard.string(forKey: modeKey) ?? "") ?? .reminders
         guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
         else { return nil }
 
@@ -195,15 +228,7 @@ final class ReminderSource: ObservableObject {
                         priority: $0.priority,
                         created: $0.creationDate ?? .distantPast) }
             .sorted(by: order)
-        return faceTasks(from: items)
-    }
-
-    // MARK: - Watch へ送る内容
-
-    var faceTasks: FaceTasks { Self.faceTasks(from: items) }
-
-    private static func faceTasks(from items: [Item]) -> FaceTasks {
-        let top = items.prefix(2)
-        return FaceTasks(lines: top.map(\.title), ids: top.map(\.id), updatedAt: .now)
+        let events = mode.usesCalendar ? EventSource.todayUpcoming(store) : []
+        return facePayload(mode: mode, items: items, events: events)
     }
 }
