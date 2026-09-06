@@ -33,10 +33,7 @@ struct ContentView: View {
         List {
             // ── リスト切替 ────────────────────────────────────
             Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack { listMenu; Spacer() }
-                    layoutPicker
-                }
+                HStack { listMenu; Spacer() }
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
@@ -57,24 +54,19 @@ struct ContentView: View {
                 addRow
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 4, trailing: 16))
-
-                sendButton
-                    .listRowBackground(bg)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 6, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
             } footer: {
                 if let error = source.errorMessage {
                     Text(error).foregroundStyle(.red).font(.footnote)
                 }
             }
 
-            // ── 文字盤プレビュー ──────────────────────────────
+            // ── 時計に反映 → 文字盤プレビュー → 表示設定 ─────────
             Section {
                 watchMock
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
             }
 
             // ── その他の情報（接続・転送枠・最後の送信）─────────
@@ -156,13 +148,15 @@ struct ContentView: View {
 
     @State private var showLimitAlert = false
 
+    /// 1行で「● リマインダー −2+ ・ ● 予定 −1+」。チップを押すと色が順ぐり
     private var layoutPicker: some View {
-        VStack(spacing: 8) {
+        HStack(spacing: 0) {
             stepper("リマインダー", colorIndex: source.layout.reminderColor, value: source.layout.reminderSlots,
                     cycleColor: { var l = source.layout; l.reminderColor = FaceStyle.next(l.reminderColor); source.layout = l }) { delta in
                 change(reminders: source.layout.reminderSlots + delta, calendar: source.layout.calendarSlots)
             }
-            stepper("カレンダー", colorIndex: source.layout.eventColor, value: source.layout.calendarSlots,
+            Spacer(minLength: 8)
+            stepper("予定", colorIndex: source.layout.eventColor, value: source.layout.calendarSlots,
                     cycleColor: { var l = source.layout; l.eventColor = FaceStyle.next(l.eventColor); source.layout = l }) { delta in
                 change(reminders: source.layout.reminderSlots, calendar: source.layout.calendarSlots + delta)
             }
@@ -186,7 +180,7 @@ struct ContentView: View {
 
     private func stepper(_ label: String, colorIndex: Int, value: Int,
                          cycleColor: @escaping () -> Void, step: @escaping (Int) -> Void) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             // 色チップ。タップするたびに15色を順ぐり
             Button {
                 Haptic.select()
@@ -196,45 +190,51 @@ struct ContentView: View {
                     Circle().fill(FaceStyle.color(colorIndex))
                     Circle().strokeBorder(Color.white.opacity(0.35), lineWidth: 1)
                 }
-                .frame(width: 24, height: 24)
+                .frame(width: 18, height: 18)
             }
             .buttonStyle(.plain)
             Text(label)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white)
-            Text("表示数")
-                .font(.system(size: 12))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(dim)
-            Spacer()
+                .lineLimit(1)
             HStack(spacing: 0) {
                 Button { step(-1) } label: {
                     Image(systemName: "minus")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 40, height: 32)
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 30, height: 28)
                 }
                 Text("\(value)")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .frame(width: 32)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .frame(width: 22)
                 Button { step(+1) } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 40, height: 32)
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 30, height: 28)
                 }
             }
             .foregroundStyle(.white)
             .buttonStyle(.plain)
-            .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
     }
 
     // MARK: - 文字盤プレビュー（一番下）
 
     private var watchMock: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
+            sendButton
+            // ボタンから時計へ流れる矢印。「これに反映する」を絵で見せる
+            VStack(spacing: 2) {
+                Rectangle().fill(edge).frame(width: 1.5, height: 14)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(edge)
+            }
+            .padding(.top, 4)
             WatchMockView(lines: FaceComposer.exampleLines(source.layout), layout: source.layout)
-            Text("時計にはこの順で出ます")
-                .font(.system(size: 12))
-                .foregroundStyle(dim)
+                .padding(.top, -6)
+            layoutPicker
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
     }
@@ -406,15 +406,17 @@ struct ContentView: View {
                 cooldownUntil = Date.now.addingTimeInterval(cooldown)
                 send(force: true, reason: "手動")
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: waiting ? "hourglass" : "applewatch")
+                HStack(spacing: 6) {
+                    Image(systemName: waiting ? "hourglass" : "arrow.down.to.line")
+                        .font(.system(size: 12, weight: .semibold))
                     Text(waiting ? "あと \(left) 秒" : "時計に反映")
+                        .font(.system(size: 13, weight: .semibold))
                 }
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(waiting ? dim : .black)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .background(waiting ? Color(white: 0.14) : .white,
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .foregroundStyle(waiting ? dim : .white)
+                .padding(.horizontal, 14)
+                .frame(height: 34)
+                .background(Color(white: 0.14), in: Capsule())
+                .overlay(Capsule().strokeBorder(edge, lineWidth: 1))
             }
             .buttonStyle(.plain)
             .disabled(waiting)
