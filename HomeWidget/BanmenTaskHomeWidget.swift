@@ -115,11 +115,8 @@ struct HomeProvider: TimelineProvider {
 
     private func entry(for context: Context) -> HomeEntry {
         HomeReminders.settleExpired()
-        let limit: Int
-        switch context.family {
-        case .systemLarge: limit = 9
-        default: limit = 3           // 正方形（小）と横長（中）は3行
-        }
+        // 多めに読んで、表示側（ViewThatFits）が収まる行数まで削る
+        let limit = context.family == .systemLarge ? 14 : 6
         let listName = LayoutStore.listName
         return HomeEntry(date: .now, listName: listName,
                          items: HomeReminders.load(listName: listName, limit: limit),
@@ -127,48 +124,45 @@ struct HomeProvider: TimelineProvider {
     }
 }
 
-// MARK: - 見た目（純正リマインダーのウィジェットと同じ作り）
+// MARK: - 見た目（純正リマインダーのウィジェットと同じ作り。見出しなし、収まる分だけ表示）
 
 struct HomeWidgetView: View {
     let entry: HomeEntry
     @Environment(\.widgetFamily) private var family
 
     private var tint: Color { FaceStyle.color(entry.layout.reminderColor) }
-    private var small: Bool { family == .systemSmall }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: small ? 2 : 4) {
-            HStack {
-                Image(systemName: "applewatch")
-                    .font(.system(size: 12, weight: .semibold))
-                Text(entry.listName)
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer()
-                Text("\(entry.items.count)")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-            .foregroundStyle(tint)
-
+        Group {
             if entry.items.isEmpty {
-                Spacer()
                 Text(EKEventStore.authorizationStatus(for: .reminder) == .fullAccess ? "タスクなし" : "盤面タスクを一度開いて許可してください")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
-                Spacer()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ForEach(entry.items) { item in
-                    row(item)
+                // 上から順に、はみ出さずに収まる最大の行数を選ぶ（長い題名は2行になるので可変）
+                ViewThatFits(in: .vertical) {
+                    ForEach(Array(stride(from: entry.items.count, through: 1, by: -1)), id: \.self) { count in
+                        list(Array(entry.items.prefix(count)))
+                    }
                 }
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .containerBackground(.black, for: .widget)
     }
 
+    private func list(_ items: [HomeItem]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(items) { item in
+                row(item)
+            }
+        }
+    }
+
     private func row(_ item: HomeItem) -> some View {
         let waiting = (item.deadline ?? .distantPast) > entry.date
-        return HStack(spacing: small ? 6 : 10) {
+        return HStack(alignment: .top, spacing: 6) {
             Button(intent: ToggleCompleteIntent(id: item.id)) {
                 ZStack {
                     Circle().strokeBorder(waiting ? tint : Color(white: 0.45), lineWidth: 1.5)
@@ -180,18 +174,20 @@ struct HomeWidgetView: View {
                     }
                 }
                 .frame(width: 20, height: 20)
-                .frame(width: 32, height: small ? 28 : 32)   // 当たり判定を広く
+                .frame(width: 24, height: 26)        // 左端に寄せつつ縦の当たり判定は行いっぱい
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             Text(item.title)
-                .font(.system(size: small ? 14 : 15, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(waiting ? Color(white: 0.5) : .white)
                 .strikethrough(waiting, color: Color(white: 0.5))
-                .lineLimit(1)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 4)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 2)
 
             if waiting, let deadline = item.deadline {
                 // 3秒で減るリングと残り秒数。ウィジェットでも動く
@@ -206,8 +202,10 @@ struct HomeWidgetView: View {
                         .foregroundStyle(.white)
                 }
                 .frame(width: 22, height: 22)
+                .padding(.top, 2)
             }
         }
+        .padding(.vertical, 1)
     }
 }
 
