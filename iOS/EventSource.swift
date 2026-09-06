@@ -13,12 +13,11 @@ enum EventSource {
         (try? await store.requestFullAccessToEvents()) ?? false
     }
 
-    /// 今日これからの予定（終日を除く）。開始時刻順。
-    static func todayUpcoming(_ store: EKEventStore, now: Date = .now) -> [FaceItem] {
+    /// これから24時間の予定（終日を除く）。開始時刻順。
+    static func upcoming24h(_ store: EKEventStore, now: Date = .now) -> [FaceItem] {
         guard isAuthorized else { return [] }
-        let cal = Calendar.current
-        let endOfDay = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now))!
-        let predicate = store.predicateForEvents(withStart: now, end: endOfDay, calendars: nil)
+        let end = now.addingTimeInterval(24 * 60 * 60)
+        let predicate = store.predicateForEvents(withStart: now, end: end, calendars: nil)
         return store.events(matching: predicate)
             .filter { !$0.isAllDay && $0.startDate > now }
             .sorted { $0.startDate < $1.startDate }

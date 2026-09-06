@@ -11,7 +11,7 @@ struct WatchContentView: View {
         let items = FaceComposer.items(session.tasks, at: .now)
         VStack(alignment: .leading, spacing: 6) {
             if items.isEmpty {
-                Text(session.tasks.mode == .calendar ? "今日の予定なし" : "タスクなし")
+                Text(session.tasks.layout.usesReminders ? "タスクなし" : "予定なし")
                     .font(.headline)
                     .foregroundStyle(.secondary)
                 Text("iPhone の盤面タスクで追加してください")

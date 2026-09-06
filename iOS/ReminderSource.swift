@@ -29,17 +29,26 @@ final class ReminderSource: ObservableObject {
             Task { await reload() }
         }
     }
-    @Published var mode: FaceMode {
+    @Published var layout: FaceLayout {
         didSet {
-            UserDefaults.standard.set(mode.rawValue, forKey: Self.modeKey)
+            Self.saveLayout(layout)
             Task { await reload() }
         }
     }
 
     static let listNameKey = "listName"
-    static let modeKey = "faceMode"
-    /// 送るリマインダーの件数。文字盤は2行だが「1つずつ」で予定が無い時の埋め草に少し多めに
-    static let reminderCount = 3
+    static let layoutKey = "faceLayout"
+    /// 送るリマインダーの件数。最大4行＋埋め草の分
+    static let reminderCount = 6
+
+    static func loadLayout() -> FaceLayout {
+        guard let data = UserDefaults.standard.data(forKey: layoutKey),
+              let l = try? JSONDecoder().decode(FaceLayout.self, from: data) else { return .default }
+        return l.clamped
+    }
+    static func saveLayout(_ l: FaceLayout) {
+        UserDefaults.standard.set(try? JSONEncoder().encode(l.clamped), forKey: layoutKey)
+    }
 
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
@@ -47,7 +56,7 @@ final class ReminderSource: ObservableObject {
 
     init() {
         listName = UserDefaults.standard.string(forKey: Self.listNameKey) ?? "基本"
-        mode = FaceMode(rawValue: UserDefaults.standard.string(forKey: Self.modeKey) ?? "") ?? .reminders
+        layout = Self.loadLayout()
         // 純正アプリ側の変更（完了・追加・編集・予定の変更）を拾って再読込する
         observer = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged, object: store, queue: .main
@@ -72,7 +81,7 @@ final class ReminderSource: ObservableObject {
             errorMessage = "設定 → プライバシー → リマインダー で許可してください"
             return
         }
-        if mode.usesCalendar { await requestCalendarAccess() }
+        if layout.usesCalendar { await requestCalendarAccess() }
         await reload()
     }
 
@@ -109,7 +118,7 @@ final class ReminderSource: ObservableObject {
             .sorted(by: Self.order)
 
         calendarGranted = EventSource.isAuthorized
-        events = mode.usesCalendar ? EventSource.todayUpcoming(store) : []
+        events = layout.usesCalendar ? EventSource.upcoming24h(store) : []
     }
 
     static func order(_ a: Item, _ b: Item) -> Bool {
@@ -198,13 +207,13 @@ final class ReminderSource: ObservableObject {
 
     // MARK: - Watch へ送る内容
 
-    var facePayload: FacePayload { Self.facePayload(mode: mode, items: items, events: events) }
+    var facePayload: FacePayload { Self.facePayload(layout: layout, items: items, events: events) }
 
-    private static func facePayload(mode: FaceMode, items: [Item], events: [FaceItem]) -> FacePayload {
+    private static func facePayload(layout: FaceLayout, items: [Item], events: [FaceItem]) -> FacePayload {
         let top = items.prefix(reminderCount).map {
             FaceItem(id: $0.id, kind: .reminder, title: $0.title, start: nil)
         }
-        return FacePayload(mode: mode, reminders: top, events: events, updatedAt: .now)
+        return FacePayload(layout: layout, reminders: top, events: events, updatedAt: .now)
     }
 
     /// 画面に依存せず、保存済みの設定から組み立てる（BGTask / App Intent / Watch からの要求）。
@@ -213,7 +222,7 @@ final class ReminderSource: ObservableObject {
         guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return nil }
         let store = EKEventStore()
         let listName = UserDefaults.standard.string(forKey: listNameKey) ?? "基本"
-        let mode = FaceMode(rawValue: UserDefaults.standard.string(forKey: modeKey) ?? "") ?? .reminders
+        let layout = loadLayout()
         guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
         else { return nil }
 
@@ -228,7 +237,7 @@ final class ReminderSource: ObservableObject {
                         priority: $0.priority,
                         created: $0.creationDate ?? .distantPast) }
             .sorted(by: order)
-        let events = mode.usesCalendar ? EventSource.todayUpcoming(store) : []
-        return facePayload(mode: mode, items: items, events: events)
+        let events = layout.usesCalendar ? EventSource.upcoming24h(store) : []
+        return facePayload(layout: layout, items: items, events: events)
     }
 }

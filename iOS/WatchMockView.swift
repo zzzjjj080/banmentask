@@ -127,7 +127,7 @@ struct WatchMockView: View {
             .foregroundStyle(lines.isEmpty ? Color(white: 0.5) : .white)
             .lineLimit(max(1, lines.count))
             .minimumScaleFactor(0.4)
-            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 56, maxHeight: 96, alignment: .leading)
             .padding(.horizontal, 10)
             .background(Color(white: 0.13), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }

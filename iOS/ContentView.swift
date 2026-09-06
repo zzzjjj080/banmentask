@@ -32,10 +32,9 @@ struct ContentView: View {
         List {
             // ── リスト切替 ────────────────────────────────────
             Section {
-                HStack {
-                    listMenu
-                    Spacer()
-                    modePicker
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack { listMenu; Spacer() }
+                    layoutPicker
                 }
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
@@ -112,11 +111,11 @@ struct ContentView: View {
         }
         .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
         .onChange(of: source.events) { _, _ in send(force: false, reason: "予定") }
-        .onChange(of: source.mode) { _, mode in
-            if mode.usesCalendar && !source.calendarGranted {
+        .onChange(of: source.layout) { _, layout in
+            if layout.usesCalendar && !source.calendarGranted {
                 Task { await source.requestCalendarAccess(); await source.reload() }
             }
-            send(force: false, reason: "モード")
+            send(force: false, reason: "表示設定")
         }
         // 編集中の行からフォーカスが外れたら確定
         .onChange(of: focusedID) { old, new in
@@ -151,20 +150,35 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - モード切替（文字盤の2行をどう埋めるか）
+    // MARK: - 行数と予定枠の選択
 
-    private var modePicker: some View {
+    private var layoutPicker: some View {
+        HStack(spacing: 8) {
+            chips(label: "行", values: FaceLayout.lineChoices, selected: source.layout.lines) { n in
+                var l = source.layout; l.lines = n; source.layout = l.clamped
+            }
+            chips(label: "予定", values: Array(0...source.layout.lines), selected: source.layout.calendarSlots) { n in
+                var l = source.layout; l.calendarSlots = n; source.layout = l.clamped
+            }
+        }
+    }
+
+    private func chips(label: String, values: [Int], selected: Int, pick: @escaping (Int) -> Void) -> some View {
         HStack(spacing: 2) {
-            ForEach(FaceMode.allCases) { m in
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(dim)
+                .padding(.leading, 8)
+                .padding(.trailing, 4)
+            ForEach(values, id: \.self) { n in
                 Button {
-                    if source.mode != m { Haptic.select(); source.mode = m }
+                    if n != selected { Haptic.select(); pick(n) }
                 } label: {
-                    Text(m.label)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(source.mode == m ? .black : dim)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(source.mode == m ? Color.white : .clear, in: Capsule())
+                    Text("\(n)")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(n == selected ? .black : dim)
+                        .frame(width: 28, height: 26)
+                        .background(n == selected ? Color.white : .clear, in: Capsule())
                 }
                 .buttonStyle(.plain)
             }

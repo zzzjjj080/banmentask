@@ -3,7 +3,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b16"
+    static let marker = "b17"
 }
 
 enum AppGroup {
@@ -13,22 +13,23 @@ enum AppGroup {
 
 // MARK: - 文字盤に出す候補
 
-/// 文字盤の2行をどう埋めるか
-enum FaceMode: String, Codable, CaseIterable, Identifiable {
-    case reminders   // リマインダーのみ
-    case mixed       // 1つずつ（リマインダー1件＋次の予定1件）
-    case calendar    // カレンダーのみ
+/// 文字盤に何行出し、そのうち何行を予定に使うか
+struct FaceLayout: Codable, Equatable {
+    static let lineChoices = [2, 3, 4]
+    var lines: Int          // 2〜4
+    var calendarSlots: Int  // 0〜lines
 
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .reminders: return "リマインダー"
-        case .mixed: return "1つずつ"
-        case .calendar: return "カレンダー"
-        }
+    static let `default` = FaceLayout(lines: 2, calendarSlots: 0)
+
+    var reminderSlots: Int { lines - calendarSlots }
+    var usesCalendar: Bool { calendarSlots > 0 }
+    var usesReminders: Bool { reminderSlots > 0 }
+
+    /// 範囲に収める
+    var clamped: FaceLayout {
+        let l = min(max(lines, 2), 4)
+        return FaceLayout(lines: l, calendarSlots: min(max(calendarSlots, 0), l))
     }
-    var usesCalendar: Bool { self != .reminders }
-    var usesReminders: Bool { self != .calendar }
 }
 
 /// 文字盤に出す1件。リマインダーか、今日のこれからの予定か。
@@ -42,7 +43,9 @@ struct FaceItem: Codable, Equatable, Identifiable {
     /// 文字盤に出す文言。予定は「14:00 歯医者」。
     var displayText: String {
         guard kind == .event, let start else { return title }
-        return "\(Self.hhmm.string(from: start)) \(title)"
+        let time = Self.hhmm.string(from: start)
+        let prefix = Calendar.current.isDateInToday(start) ? "" : "明日"
+        return "\(prefix)\(time) \(title)"
     }
 
     private static let hhmm: DateFormatter = {
@@ -55,14 +58,14 @@ struct FaceItem: Codable, Equatable, Identifiable {
 
 /// iPhone → Watch へ送る一式。文字盤の2行はここから FaceComposer が組み立てる。
 struct FacePayload: Codable, Equatable {
-    var mode: FaceMode
+    var layout: FaceLayout
     var reminders: [FaceItem]   // 上位数件（並び順どおり）
-    var events: [FaceItem]      // 今日の予定のうち終日でないもの（開始時刻順）。開始済みは受信側で落とす
+    var events: [FaceItem]      // これから24時間の予定のうち終日でないもの（開始時刻順）。開始済みは受信側で落とす
     var updatedAt: Date
 
-    static let empty = FacePayload(mode: .reminders, reminders: [], events: [], updatedAt: .distantPast)
+    static let empty = FacePayload(layout: .default, reminders: [], events: [], updatedAt: .distantPast)
     static let placeholder = FacePayload(
-        mode: .mixed,
+        layout: FaceLayout(lines: 2, calendarSlots: 1),
         reminders: [FaceItem(id: "r1", kind: .reminder, title: "洗濯する", start: nil)],
         events: [FaceItem(id: "e1", kind: .event, title: "歯医者",
                           start: Calendar.current.date(byAdding: .hour, value: 2, to: .now))],
@@ -72,35 +75,29 @@ struct FacePayload: Codable, Equatable {
     var signature: String {
         let r = reminders.map { "\($0.id):\($0.title)" }.joined(separator: "|")
         let e = events.map { "\($0.id):\($0.title):\($0.start?.timeIntervalSince1970 ?? 0)" }.joined(separator: "|")
-        return "\(mode.rawValue)#\(r)#\(e)"
+        return "\(layout.lines)/\(layout.calendarSlots)#\(r)#\(e)"
     }
 }
 
 /// 文字盤の2行を決める。iPhone のプレビュー・Watch アプリ・ウィジェットの3か所で同じ結果になる。
 enum FaceComposer {
-    static let slots = 2
-
+    /// 行数と割り当てに従って埋める。
+    /// リマインダー枠 → 予定枠 の順に並べ、片方が足りなければもう片方で埋める。
     static func items(_ p: FacePayload, at now: Date) -> [FaceItem] {
+        let layout = p.layout.clamped
         let upcoming = p.events.filter { ($0.start ?? .distantPast) > now }
-        var out: [FaceItem] = []
-        switch p.mode {
-        case .reminders:
-            out = Array(p.reminders.prefix(slots))
-        case .calendar:
-            out = Array(upcoming.prefix(slots))
-        case .mixed:
-            if let r = p.reminders.first { out.append(r) }
-            if let e = upcoming.first { out.append(e) }
-            // 片方が足りなければもう片方で埋める
-            var moreR = p.reminders.dropFirst().makeIterator()
-            var moreE = upcoming.dropFirst().makeIterator()
-            while out.count < slots {
-                if let r = moreR.next() { out.append(r) }
-                else if let e = moreE.next() { out.append(e) }
-                else { break }
-            }
+        var reminders = Array(p.reminders.prefix(layout.reminderSlots))
+        var events = Array(upcoming.prefix(layout.calendarSlots))
+        // 埋め草
+        if reminders.count < layout.reminderSlots {
+            let more = layout.reminderSlots - reminders.count
+            events += upcoming.dropFirst(events.count).prefix(more)
         }
-        return out
+        if events.count < layout.calendarSlots {
+            let more = layout.calendarSlots - events.count
+            reminders += p.reminders.dropFirst(reminders.count).prefix(more)
+        }
+        return Array((reminders + events).prefix(layout.lines))
     }
 
     static func lines(_ p: FacePayload, at now: Date) -> [String] {
@@ -109,7 +106,7 @@ enum FaceComposer {
 
     /// 表示が変わる時刻。予定の開始時刻ごとに文字盤を切り替えるためにウィジェットが使う。
     static func changePoints(_ p: FacePayload, after now: Date) -> [Date] {
-        guard p.mode.usesCalendar else { return [] }
+        guard p.layout.usesCalendar else { return [] }
         return p.events.compactMap(\.start).filter { $0 > now }.sorted()
     }
 }
