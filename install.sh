@@ -45,18 +45,25 @@ install_to() {  # install_to <identifier> <app path>
   return 1
 }
 
-build() {  # build <scheme> <platform>
-  xcodebuild -project BanmenTask.xcodeproj -scheme "$1" -configuration Debug \
-    -destination "generic/platform=$2" -derivedDataPath "$DD" \
-    -allowProvisioningUpdates build 2>&1 | grep -E 'error:|warning: .*Swift|BUILD (SUCCEEDED|FAILED)' || true
+build() {  # build <scheme> <platform>  失敗したら 1 を返す
+  local log="$DD/$1.log"
+  mkdir -p "$DD"
+  if xcodebuild -project BanmenTask.xcodeproj -scheme "$1" -configuration Debug \
+      -destination "generic/platform=$2" -derivedDataPath "$DD" \
+      -allowProvisioningUpdates build >"$log" 2>&1; then
+    grep -E 'BUILD SUCCEEDED' "$log" || true
+    return 0
+  fi
+  grep -E 'error:|BUILD FAILED' "$log" | sort -u
+  return 1
 }
 
 if [ "$WHAT" = both ] || [ "$WHAT" = phone ]; then
   [ -n "$PHONE" ] || { echo "❌ iPhone が見つかりません"; echo "$LIST" | tail -n +3; exit 1; }
   echo "→ iPhone 用ビルド"
-  build BanmenTask iOS
+  rm -rf "$DD/Build/Products/Debug-iphoneos/BanmenTask.app"   # 古いビルドを入れないため
+  build BanmenTask iOS || { echo "❌ iPhone 用ビルド失敗。上のエラーを貼ってください"; exit 1; }
   APP="$DD/Build/Products/Debug-iphoneos/BanmenTask.app"
-  [ -d "$APP" ] || { echo "❌ iPhone 用ビルド失敗。上のエラーを貼ってください"; exit 1; }
   echo "→ iPhone にインストール"
   install_to "$PHONE" "$APP" || { echo "❌ iPhone へのインストール失敗"; exit 1; }
   echo "✅ iPhone OK"
@@ -65,9 +72,9 @@ fi
 if [ "$WHAT" = both ] || [ "$WHAT" = watch ]; then
   [ -n "$WATCH" ] || { echo "❌ Apple Watch が見つかりません（iPhone 経由で見えている必要があります）"; echo "$LIST" | tail -n +3; exit 1; }
   echo "→ Watch 用ビルド"
-  build BanmenTaskWatch watchOS
+  rm -rf "$DD/Build/Products/Debug-watchos/BanmenTaskWatch.app"
+  build BanmenTaskWatch watchOS || { echo "❌ Watch 用ビルド失敗。上のエラーを貼ってください"; exit 1; }
   APP="$DD/Build/Products/Debug-watchos/BanmenTaskWatch.app"
-  [ -d "$APP" ] || { echo "❌ Watch 用ビルド失敗。上のエラーを貼ってください"; exit 1; }
   echo "→ Watch にインストール（1〜2分かかることがあります）"
   install_to "$WATCH" "$APP" || { echo "❌ Watch へのインストール失敗"; exit 1; }
   echo "✅ Watch OK"

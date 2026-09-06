@@ -115,6 +115,26 @@ struct ContentView: View {
         .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
     }
 
+    // MARK: - リスト切替
+
+    private var listMenu: some View {
+        Menu {
+            Picker("リスト", selection: $source.listName) {
+                ForEach(source.listNames, id: \.self) { Text($0).tag($0) }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(source.listName)
+                Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
+            }
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(dim)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color(white: 0.16), in: Capsule())
+        }
+    }
+
     // MARK: - 文字盤プレビュー（一番下）
 
     private var watchMock: some View {

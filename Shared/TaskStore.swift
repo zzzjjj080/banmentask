@@ -4,7 +4,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// Watch アプリの画面と iPhone の状態欄に出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b11"
+    static let marker = "b12"
 }
 
 enum AppGroup {
