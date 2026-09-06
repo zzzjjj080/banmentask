@@ -26,7 +26,7 @@ struct WatchContentView: View {
             Spacer()
 
             if let error = session.lastError {
-                Text(error).font(.footnote).foregroundStyle(.red).lineLimit(1)
+                Text(error).font(.footnote).foregroundStyle(.orange).lineLimit(2)
             } else {
                 Text(session.tasks.updatedAt, style: .relative)
                     .font(.footnote)

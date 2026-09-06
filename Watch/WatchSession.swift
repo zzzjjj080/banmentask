@@ -13,6 +13,9 @@ final class WatchSession: NSObject, ObservableObject {
     @Published var isBusy = false
     @Published var lastError: String?
 
+    /// 接続待ちの間に溜めておく要求。繋がった瞬間に投げる
+    private var queued: [String: Any]?
+
     private override init() {
         super.init()
         WCSession.default.delegate = self
@@ -33,9 +36,20 @@ final class WatchSession: NSObject, ObservableObject {
     private func ask(_ message: [String: Any]) {
         let session = WCSession.default
         guard session.activationState == .activated, session.isReachable else {
-            lastError = "iPhone に接続できません"
+            // 開いた直後は接続が立ち上がる前なので、少し待ってから諦める
+            queued = message
+            isBusy = true
+            lastError = nil
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                guard queued != nil else { return }   // その間に繋がって送れた
+                queued = nil
+                isBusy = false
+                lastError = "iPhone に接続できません。近くにあるか確認してください"
+            }
             return
         }
+        queued = nil
         isBusy = true
         lastError = nil
         session.sendMessage(message, replyHandler: { reply in
@@ -68,6 +82,14 @@ extension WatchSession: WCSessionDelegate {
         let context = session.receivedApplicationContext
         Task { @MainActor in
             if !context.isEmpty { apply(context) }
+        }
+    }
+
+    /// 接続が立ち上がったら、待たせていた要求を投げる
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        guard session.isReachable else { return }
+        Task { @MainActor in
+            if let m = queued { ask(m) }
         }
     }
 
