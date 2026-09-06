@@ -58,11 +58,11 @@ struct WatchContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
-        .overlay(alignment: .bottomTrailing) {
+        .overlay(alignment: .topTrailing) {
             Text(BuildInfo.marker)
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-                .padding(4)
+                .font(.system(size: 8, design: .monospaced))
+                .foregroundStyle(.quaternary)
+                .padding(.trailing, 2)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { session.requestRefresh() }

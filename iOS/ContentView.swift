@@ -78,6 +78,12 @@ struct ContentView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(bg.ignoresSafeArea())
+        .overlay(alignment: .topTrailing) {
+            Text(BuildInfo.marker)
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(Color(white: 0.3))
+                .padding(.trailing, 6)
+        }
         .environment(\.editMode, .constant(.active))   // 常にドラッグハンドルを出す
         .preferredColorScheme(.dark)
         .tint(.white)
@@ -109,86 +115,16 @@ struct ContentView: View {
         .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
     }
 
-    // MARK: - 文字盤プレビュー（Apple Watch の形）
+    // MARK: - 文字盤プレビュー（一番下）
 
-    /// 実際の文字盤と同じルールで描く: 2行とも同じフォント、長い方に合わせて一緒に縮む。
     private var watchMock: some View {
-        let lines = source.faceTasks.lines
-        let caseColor = Color(white: 0.22)
-        let caseEdge = Color(white: 0.38)
-        return VStack(spacing: 10) {
-            ZStack {
-                // バンド
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(white: 0.14))
-                    .frame(width: 120, height: 320)
-                // ケース
-                RoundedRectangle(cornerRadius: 46, style: .continuous)
-                    .fill(caseColor)
-                    .overlay(RoundedRectangle(cornerRadius: 46, style: .continuous).stroke(caseEdge, lineWidth: 2))
-                    .frame(width: 216, height: 262)
-                // デジタルクラウン
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(caseEdge)
-                    .frame(width: 10, height: 40)
-                    .offset(x: 112, y: -50)
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(caseEdge)
-                    .frame(width: 7, height: 52)
-                    .offset(x: 110, y: 20)
-                // 画面
-                RoundedRectangle(cornerRadius: 38, style: .continuous)
-                    .fill(.black)
-                    .frame(width: 190, height: 236)
-                    .overlay(alignment: .top) {
-                        VStack(spacing: 0) {
-                            HStack {
-                                Spacer()
-                                Text(Date.now, style: .time)
-                                    .font(.system(size: 22, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.white)
-                            }
-                            .padding(.top, 18)
-                            .padding(.trailing, 20)
-                            Spacer()
-                            // 横長スロット（実際のコンプリケーション）
-                            Text(lines.isEmpty ? "タスクなし" : lines.joined(separator: "\n"))
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(lines.isEmpty ? dim : .white)
-                                .lineLimit(max(1, lines.count))
-                                .minimumScaleFactor(0.4)
-                                .frame(width: 154, height: 60, alignment: .leading)
-                                .padding(.horizontal, 8)
-                                .background(Color(white: 0.11), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            Spacer()
-                        }
-                    }
-            }
-            .frame(height: 300)
-            .clipped()
+        VStack(spacing: 8) {
+            WatchMockView(lines: source.faceTasks.lines)
             Text("時計ではこう見えます")
                 .font(.system(size: 12))
                 .foregroundStyle(dim)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private var listMenu: some View {
-        Menu {
-            Picker("リスト", selection: $source.listName) {
-                ForEach(source.listNames, id: \.self) { Text($0).tag($0) }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Text(source.listName)
-                Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
-            }
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(dim)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color(white: 0.16), in: Capsule())
-        }
     }
 
     // MARK: - タスク行
@@ -235,8 +171,8 @@ struct ContentView: View {
                 tile("WATCH アプリ", ok: session.isWatchAppInstalled)
                 tile("文字盤に配置", ok: session.isComplicationEnabled)
                 tile("残り転送 / 日", value: "\(session.remainingTransfers)")
-                tile("ビルド", value: BuildInfo.marker)
-                TimelineView(.periodic(from: .now, by: 1)) { context in
+            }
+            TimelineView(.periodic(from: .now, by: 1)) { context in
                     let remaining = Int(cooldownUntil.timeIntervalSince(context.date).rounded(.up))
                     let waiting = remaining > 0
                     Button {
@@ -255,7 +191,6 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(waiting)
-                }
             }
             Text(session.lastResult)
                 .font(.system(size: 13, design: .monospaced))
