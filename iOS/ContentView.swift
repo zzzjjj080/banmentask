@@ -82,18 +82,19 @@ struct ContentView: View {
                 statusGrid
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 32, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 6, trailing: 16))
+                Text(BuildInfo.marker)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.3))
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .listRowBackground(bg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 32, trailing: 16))
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(bg.ignoresSafeArea())
-        .overlay(alignment: .topTrailing) {
-            Text(BuildInfo.marker)
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(Color(white: 0.3))
-                .padding(.trailing, 6)
-        }
         .environment(\.editMode, .constant(.active))   // 常にドラッグハンドルを出す
         .preferredColorScheme(.dark)
         .tint(.white)
