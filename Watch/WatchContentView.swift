@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 /// 文字盤のコンプリケーションをタップすると開く画面。
 /// 開いた瞬間に iPhone へ問い合わせて最新化し、○で完了できる。
@@ -19,6 +20,7 @@ struct WatchContentView: View {
                 ForEach(Array(session.tasks.lines.enumerated()), id: \.offset) { index, line in
                     let id = index < session.tasks.ids.count ? session.tasks.ids[index] : nil
                     Button {
+                        WKInterfaceDevice.current().play(.success)
                         if let id { session.complete(id: id) }
                     } label: {
                         HStack(alignment: .top, spacing: 8) {
@@ -48,6 +50,7 @@ struct WatchContentView: View {
                 }
                 Spacer()
                 Button {
+                    WKInterfaceDevice.current().play(.click)
                     session.requestRefresh()
                 } label: {
                     Image(systemName: "arrow.clockwise")

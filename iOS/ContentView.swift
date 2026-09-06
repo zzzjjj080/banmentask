@@ -1,15 +1,25 @@
 import SwiftUI
 
 /// 純正リマインダーの「文字盤向けフロントエンド」。
-/// 見た目は文字盤に合わせて黒地に白。上に文字盤プレビュー、下にタスク、最後に状態タイル。
+/// 見た目は文字盤に合わせて黒地に白。タスク → 接続の状態 → 文字盤プレビューの順。
 struct ContentView: View {
     @EnvironmentObject private var session: PhoneSession
     @StateObject private var source = ReminderSource()
     @Environment(\.scenePhase) private var scenePhase
 
+    // 編集中の下書き（id → 文字列）。純正リマインダーと同じく、行をタップしてその場で編集する
+    @State private var drafts: [String: String] = [:]
+    @FocusState private var focusedID: String?
+
+    // 追加欄
+    @State private var isAdding = false
     @State private var newTitle = ""
-    @State private var renaming: ReminderSource.Item?
-    @State private var renameTitle = ""
+    @FocusState private var addFocused: Bool
+
+    // 完了は猶予つき。○を押すと打ち消し線になり、3秒後に本当に完了する。その間にもう一度押せば取り消し
+    @State private var pending: [String: Task<Void, Never>] = [:]
+    private let completionGrace: TimeInterval = 3
+
     @State private var cooldownUntil: Date = .distantPast   // 手動送信の連打防止
     private let cooldown: TimeInterval = 60
 
@@ -36,30 +46,21 @@ struct ContentView: View {
                         .listRowSeparatorTint(edge)
                 }
                 .onMove { from, to in
+                    Haptic.select()
                     Task { await source.move(from: from, to: to) }
                 }
 
-                // 追加欄は並びの一番下
-                HStack(spacing: 14) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(dim)
-                        .frame(width: 26)
-                    TextField("", text: $newTitle, prompt: Text("追加").foregroundStyle(dim))
-                        .foregroundStyle(.white)
-                        .submitLabel(.done)
-                        .onSubmit(add)
-                }
-                .padding(.vertical, 4)
-                .listRowBackground(bg)
-                .listRowSeparator(.hidden)
+                addRow
+                    .listRowBackground(bg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
             } footer: {
                 if let error = source.errorMessage {
                     Text(error).foregroundStyle(.red).font(.footnote)
                 }
             }
 
-            // ── Watch の状態（2列タイル）──────────────────────
+            // ── Watch の状態 ──────────────────────────────────
             Section {
                 statusGrid
                     .listRowBackground(bg)
@@ -87,19 +88,7 @@ struct ContentView: View {
         .environment(\.editMode, .constant(.active))   // 常にドラッグハンドルを出す
         .preferredColorScheme(.dark)
         .tint(.white)
-        .alert("タイトルを変更", isPresented: Binding(
-            get: { renaming != nil },
-            set: { if !$0 { renaming = nil } }
-        )) {
-            TextField("タイトル", text: $renameTitle)
-            Button("保存") {
-                if let item = renaming {
-                    Task { await source.rename(id: item.id, title: renameTitle) }
-                }
-                renaming = nil
-            }
-            Button("キャンセル", role: .cancel) { renaming = nil }
-        }
+        .scrollDismissesKeyboard(.interactively)
         .task { await source.requestAccess() }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -113,13 +102,24 @@ struct ContentView: View {
             }
         }
         .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
+        // 編集中の行からフォーカスが外れたら確定
+        .onChange(of: focusedID) { old, new in
+            if let old, old != new { commitRename(old) }
+        }
+        // 追加欄からフォーカスが外れて空なら閉じる
+        .onChange(of: addFocused) { _, focused in
+            if !focused && newTitle.isEmpty { isAdding = false }
+        }
     }
 
     // MARK: - リスト切替
 
     private var listMenu: some View {
         Menu {
-            Picker("リスト", selection: $source.listName) {
+            Picker("リスト", selection: Binding(
+                get: { source.listName },
+                set: { Haptic.select(); source.listName = $0 }
+            )) {
                 ForEach(source.listNames, id: \.self) { Text($0).tag($0) }
             }
         } label: {
@@ -147,39 +147,127 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - タスク行
+    // MARK: - タスク行（タップでその場編集、○は3秒の猶予つき完了）
 
     private func taskRow(index: Int, item: ReminderSource.Item) -> some View {
-        HStack(spacing: 14) {
+        let isPending = pending[item.id] != nil
+        let onFace = index < 2
+        return HStack(spacing: 14) {
             Button {
-                Task { await source.complete(id: item.id) }
+                toggleComplete(item)
             } label: {
-                Circle()
-                    .strokeBorder(index < 2 ? Color.white : dim, lineWidth: 1.5)
-                    .frame(width: 22, height: 22)
+                ZStack {
+                    Circle()
+                        .strokeBorder(onFace ? Color.white : dim, lineWidth: 1.5)
+                    if isPending {
+                        Circle().fill(.white)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.black)
+                    }
+                }
+                .frame(width: 22, height: 22)
+                .animation(.easeOut(duration: 0.15), value: isPending)
             }
             .buttonStyle(.borderless)
             .frame(width: 26)
 
-            Text(item.title)
-                .font(.system(size: 18, weight: index < 2 ? .semibold : .regular))
-                .foregroundStyle(index < 2 ? .white : dim)
-                .lineLimit(1)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    renameTitle = item.title
-                    renaming = item
-                }
+            TextField("", text: draftBinding(item))
+                .font(.system(size: 18, weight: onFace ? .semibold : .regular))
+                .foregroundStyle(isPending ? dim : (onFace ? .white : dim))
+                .strikethrough(isPending, color: dim)
+                .focused($focusedID, equals: item.id)
+                .submitLabel(.done)
+                .onSubmit { focusedID = nil }
+                .disabled(isPending)
 
             Spacer(minLength: 8)
 
-            if index < 2 {
+            if isPending {
+                Text("取り消し")
+                    .font(.system(size: 12))
+                    .foregroundStyle(dim)
+            } else if onFace {
                 Image(systemName: "applewatch")
                     .font(.system(size: 13))
                     .foregroundStyle(dim)
             }
         }
         .padding(.vertical, 6)
+    }
+
+    private func draftBinding(_ item: ReminderSource.Item) -> Binding<String> {
+        Binding(
+            get: { drafts[item.id] ?? item.title },
+            set: { drafts[item.id] = $0 }
+        )
+    }
+
+    private func commitRename(_ id: String) {
+        guard let draft = drafts.removeValue(forKey: id),
+              let item = source.items.first(where: { $0.id == id }),
+              draft.trimmingCharacters(in: .whitespacesAndNewlines) != item.title
+        else { return }
+        Haptic.confirm()
+        Task { await source.rename(id: id, title: draft) }
+    }
+
+    /// ○を押す → 3秒後に完了。その間にもう一度押すと取り消し。
+    private func toggleComplete(_ item: ReminderSource.Item) {
+        if let task = pending.removeValue(forKey: item.id) {
+            task.cancel()
+            Haptic.warning()
+            return
+        }
+        Haptic.success()
+        pending[item.id] = Task {
+            try? await Task.sleep(for: .seconds(completionGrace))
+            guard !Task.isCancelled else { return }
+            await source.complete(id: item.id)
+            pending[item.id] = nil
+        }
+    }
+
+    // MARK: - 追加（横長の＋ボタン → 押すと入力欄に変わる）
+
+    private var addRow: some View {
+        Group {
+            if isAdding {
+                HStack(spacing: 14) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26)
+                    TextField("", text: $newTitle, prompt: Text("タスク名").foregroundStyle(dim))
+                        .font(.system(size: 18))
+                        .foregroundStyle(.white)
+                        .focused($addFocused)
+                        .submitLabel(.done)
+                        .onSubmit(add)
+                }
+                .padding(.horizontal, 14)
+                .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+                .background(panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(edge, lineWidth: 1))
+            } else {
+                Button {
+                    Haptic.tap()
+                    isAdding = true
+                    addFocused = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                        Text("追加")
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(edge, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: - 接続の状態（iPhone → Watch → 文字盤 の経路として見せる）
@@ -239,6 +327,7 @@ struct ContentView: View {
                 let left = Int(cooldownUntil.timeIntervalSince(context.date).rounded(.up))
                 let waiting = left > 0
                 Button {
+                    Haptic.confirm()
                     cooldownUntil = Date.now.addingTimeInterval(cooldown)
                     send(force: true, reason: "手動")
                 } label: {
@@ -307,9 +396,12 @@ struct ContentView: View {
     // MARK: - 操作
 
     private func add() {
-        let title = newTitle
+        let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         newTitle = ""
+        guard !title.isEmpty else { isAdding = false; return }
+        Haptic.confirm()
         Task { await source.add(title: title) }
+        addFocused = true   // 続けて入力できるように開いたまま
     }
 
     private func send(force: Bool, reason: String) {
