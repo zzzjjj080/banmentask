@@ -3,7 +3,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b17"
+    static let marker = "b18"
 }
 
 enum AppGroup {
@@ -15,21 +15,36 @@ enum AppGroup {
 
 /// 文字盤に何行出し、そのうち何行を予定に使うか
 struct FaceLayout: Codable, Equatable {
-    static let lineChoices = [2, 3, 4]
-    var lines: Int          // 2〜4
+    /// 文字盤に出せる最大行数
+    static let maxLines = 4
+    var lines: Int          // 1〜maxLines
     var calendarSlots: Int  // 0〜lines
 
     static let `default` = FaceLayout(lines: 2, calendarSlots: 0)
+
+    init(lines: Int, calendarSlots: Int) {
+        self.lines = lines
+        self.calendarSlots = calendarSlots
+    }
+    init(reminders: Int, calendar: Int) {
+        self.init(lines: reminders + calendar, calendarSlots: calendar)
+    }
 
     var reminderSlots: Int { lines - calendarSlots }
     var usesCalendar: Bool { calendarSlots > 0 }
     var usesReminders: Bool { reminderSlots > 0 }
 
-    /// 範囲に収める
+    /// 範囲に収める（合計1〜maxLines）
     var clamped: FaceLayout {
-        let l = min(max(lines, 2), 4)
+        let l = min(max(lines, 1), Self.maxLines)
         return FaceLayout(lines: l, calendarSlots: min(max(calendarSlots, 0), l))
     }
+}
+
+/// 文字盤の1行（文言と種類）。色分けに使う。
+struct FaceLine: Equatable {
+    let text: String
+    let kind: FaceItem.Kind
 }
 
 /// 文字盤に出す1件。リマインダーか、今日のこれからの予定か。
@@ -102,6 +117,17 @@ enum FaceComposer {
 
     static func lines(_ p: FacePayload, at now: Date) -> [String] {
         items(p, at: now).map(\.displayText)
+    }
+
+    static func faceLines(_ p: FacePayload, at now: Date) -> [FaceLine] {
+        items(p, at: now).map { FaceLine(text: $0.displayText, kind: $0.kind) }
+    }
+
+    /// iPhone のプレビュー用。実データではなく「リマインダー1 / 予定1」のような例文。
+    static func exampleLines(_ layout: FaceLayout) -> [FaceLine] {
+        let l = layout.clamped
+        return (0..<l.reminderSlots).map { FaceLine(text: "リマインダー\($0 + 1)", kind: .reminder) }
+             + (0..<l.calendarSlots).map { FaceLine(text: "予定\($0 + 1)", kind: .event) }
     }
 
     /// 表示が変わる時刻。予定の開始時刻ごとに文字盤を切り替えるためにウィジェットが使う。

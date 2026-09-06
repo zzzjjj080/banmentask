@@ -150,49 +150,72 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - 行数と予定枠の選択
+    // MARK: - 表示数（リマインダー・予定をそれぞれ ＋− で）
+
+    @State private var showLimitAlert = false
 
     private var layoutPicker: some View {
-        HStack(spacing: 8) {
-            chips(label: "行", values: FaceLayout.lineChoices, selected: source.layout.lines) { n in
-                var l = source.layout; l.lines = n; source.layout = l.clamped
+        VStack(spacing: 8) {
+            stepper("リマインダー", color: FaceStyle.reminder, value: source.layout.reminderSlots) { delta in
+                change(reminders: source.layout.reminderSlots + delta, calendar: source.layout.calendarSlots)
             }
-            chips(label: "予定", values: Array(0...source.layout.lines), selected: source.layout.calendarSlots) { n in
-                var l = source.layout; l.calendarSlots = n; source.layout = l.clamped
+            stepper("カレンダー", color: FaceStyle.event, value: source.layout.calendarSlots) { delta in
+                change(reminders: source.layout.reminderSlots, calendar: source.layout.calendarSlots + delta)
             }
+        }
+        .alert("文字盤には合計 \(FaceLayout.maxLines) 件までです", isPresented: $showLimitAlert) {
+            Button("OK", role: .cancel) {}
         }
     }
 
-    private func chips(label: String, values: [Int], selected: Int, pick: @escaping (Int) -> Void) -> some View {
-        HStack(spacing: 2) {
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(dim)
-                .padding(.leading, 8)
-                .padding(.trailing, 4)
-            ForEach(values, id: \.self) { n in
-                Button {
-                    if n != selected { Haptic.select(); pick(n) }
-                } label: {
-                    Text("\(n)")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(n == selected ? .black : dim)
-                        .frame(width: 28, height: 26)
-                        .background(n == selected ? Color.white : .clear, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
+    private func change(reminders: Int, calendar: Int) {
+        guard reminders >= 0, calendar >= 0, reminders + calendar >= 1 else { return }
+        guard reminders + calendar <= FaceLayout.maxLines else {
+            Haptic.warning()
+            showLimitAlert = true
+            return
         }
-        .padding(2)
-        .background(Color(white: 0.16), in: Capsule())
+        Haptic.select()
+        source.layout = FaceLayout(reminders: reminders, calendar: calendar)
+    }
+
+    private func stepper(_ label: String, color: Color, value: Int, step: @escaping (Int) -> Void) -> some View {
+        HStack(spacing: 10) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white)
+            Text("表示数")
+                .font(.system(size: 12))
+                .foregroundStyle(dim)
+            Spacer()
+            HStack(spacing: 0) {
+                Button { step(-1) } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: 40, height: 32)
+                }
+                Text("\(value)")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .frame(width: 32)
+                Button { step(+1) } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: 40, height: 32)
+                }
+            }
+            .foregroundStyle(.white)
+            .buttonStyle(.plain)
+            .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
     }
 
     // MARK: - 文字盤プレビュー（一番下）
 
     private var watchMock: some View {
         VStack(spacing: 8) {
-            WatchMockView(lines: FaceComposer.lines(source.facePayload, at: .now))
-            Text("時計ではこう見えます")
+            WatchMockView(lines: FaceComposer.exampleLines(source.layout))
+            Text("時計にはこの順で出ます")
                 .font(.system(size: 12))
                 .foregroundStyle(dim)
         }
@@ -215,9 +238,9 @@ struct ContentView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .strokeBorder(onFace ? Color.white : dim, lineWidth: 1.5)
+                        .strokeBorder(onFace ? FaceStyle.reminder : dim, lineWidth: 1.5)
                     if isPending {
-                        Circle().fill(.white)
+                        Circle().fill(FaceStyle.reminder)
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.black)

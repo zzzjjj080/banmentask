@@ -71,6 +71,7 @@ struct WatchContentView: View {
                         .foregroundStyle(.secondary)
                     Text(item.title)
                         .font(index == 0 ? .headline : .body)
+                        .foregroundStyle(FaceStyle.reminder)
                         .lineLimit(2)
                     Spacer(minLength: 0)
                 }
@@ -84,6 +85,7 @@ struct WatchContentView: View {
                     .foregroundStyle(.secondary)
                 Text(item.displayText)
                     .font(index == 0 ? .headline : .body)
+                    .foregroundStyle(FaceStyle.event)
                     .lineLimit(2)
                 Spacer(minLength: 0)
             }

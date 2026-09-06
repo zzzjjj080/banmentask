@@ -5,7 +5,7 @@ import SwiftUI
 /// 中央の横長スロットが盤面タスク。周りの日付・時刻・下段3つは雰囲気用のダミー。
 /// 横長スロットの描画ルールは実際のウィジェットと同じ（2行同じフォント、長い方に合わせて一緒に縮む）。
 struct WatchMockView: View {
-    let lines: [String]
+    let lines: [FaceLine]
 
     private let caseW: CGFloat = 232
     private let caseH: CGFloat = 282
@@ -122,9 +122,8 @@ struct WatchMockView: View {
 
     /// 盤面タスクの横長スロット。実際のウィジェットと同じ描画ルール。
     private var rectangularSlot: some View {
-        Text(lines.isEmpty ? "タスクなし" : lines.joined(separator: "\n"))
+        (lines.isEmpty ? Text("タスクなし").foregroundStyle(Color(white: 0.5)) : FaceStyle.coloredText(lines))
             .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(lines.isEmpty ? Color(white: 0.5) : .white)
             .lineLimit(max(1, lines.count))
             .minimumScaleFactor(0.4)
             .frame(maxWidth: .infinity, minHeight: 56, maxHeight: 96, alignment: .leading)

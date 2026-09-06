@@ -6,6 +6,7 @@ struct TaskEntry: TimelineEntry {
     let payload: FacePayload
 
     var lines: [String] { FaceComposer.lines(payload, at: date) }
+    var faceLines: [FaceLine] { FaceComposer.faceLines(payload, at: date) }
 }
 
 struct TaskProvider: TimelineProvider {
@@ -55,8 +56,8 @@ struct BanmenTaskWidgetView: View {
     /// 別々の Text にすると長い行だけ縮んでサイズが揃わないため、
     /// 改行で繋いだ1つの Text に lineLimit をかけ、長い方に合わせて両方を同じ倍率で縮める。
     private var rectangular: some View {
-        let lines = entry.lines
-        return Text(lines.isEmpty ? "タスクなし" : lines.joined(separator: "\n"))
+        let lines = entry.faceLines
+        return (lines.isEmpty ? Text("タスクなし") : FaceStyle.coloredText(lines))
             .font(.system(size: 24, weight: .semibold))
             .lineLimit(max(1, lines.count))
             .minimumScaleFactor(0.4)
