@@ -115,7 +115,11 @@ struct HomeProvider: TimelineProvider {
 
     private func entry(for context: Context) -> HomeEntry {
         HomeReminders.settleExpired()
-        let limit = context.family == .systemLarge ? 9 : 3
+        let limit: Int
+        switch context.family {
+        case .systemLarge: limit = 9
+        default: limit = 3           // 正方形（小）と横長（中）は3行
+        }
         let listName = LayoutStore.listName
         return HomeEntry(date: .now, listName: listName,
                          items: HomeReminders.load(listName: listName, limit: limit),
@@ -127,11 +131,13 @@ struct HomeProvider: TimelineProvider {
 
 struct HomeWidgetView: View {
     let entry: HomeEntry
+    @Environment(\.widgetFamily) private var family
 
     private var tint: Color { FaceStyle.color(entry.layout.reminderColor) }
+    private var small: Bool { family == .systemSmall }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: small ? 2 : 4) {
             HStack {
                 Image(systemName: "applewatch")
                     .font(.system(size: 12, weight: .semibold))
@@ -162,7 +168,7 @@ struct HomeWidgetView: View {
 
     private func row(_ item: HomeItem) -> some View {
         let waiting = (item.deadline ?? .distantPast) > entry.date
-        return HStack(spacing: 10) {
+        return HStack(spacing: small ? 6 : 10) {
             Button(intent: ToggleCompleteIntent(id: item.id)) {
                 ZStack {
                     Circle().strokeBorder(waiting ? tint : Color(white: 0.45), lineWidth: 1.5)
@@ -174,13 +180,13 @@ struct HomeWidgetView: View {
                     }
                 }
                 .frame(width: 20, height: 20)
-                .frame(width: 32, height: 32)       // 当たり判定を広く
+                .frame(width: 32, height: small ? 28 : 32)   // 当たり判定を広く
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             Text(item.title)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: small ? 14 : 15, weight: .medium))
                 .foregroundStyle(waiting ? Color(white: 0.5) : .white)
                 .strikethrough(waiting, color: Color(white: 0.5))
                 .lineLimit(1)
@@ -216,7 +222,7 @@ struct BanmenTaskHomeWidget: Widget {
         }
         .configurationDisplayName("盤面タスク")
         .description("リマインダーをホーム画面から完了できます。○を押して3秒以内なら取り消せます。")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
