@@ -18,6 +18,7 @@ struct ContentView: View {
 
     // 完了は猶予つき。○を押すと打ち消し線になり、3秒後に本当に完了する。その間にもう一度押せば取り消し
     @State private var pending: [String: Task<Void, Never>] = [:]
+    @State private var pendingSince: [String: Date] = [:]
     private let completionGrace: TimeInterval = 3
 
     @State private var cooldownUntil: Date = .distantPast   // 手動送信の連打防止
@@ -264,9 +265,7 @@ struct ContentView: View {
             Spacer(minLength: 8)
 
             if isPending {
-                Text("取り消し")
-                    .font(.system(size: 12))
-                    .foregroundStyle(dim)
+                countdown(for: item.id)
             } else if onFace {
                 Image(systemName: "applewatch")
                     .font(.system(size: 13))
@@ -274,6 +273,33 @@ struct ContentView: View {
             }
         }
         .padding(.vertical, 6)
+    }
+
+    /// 完了までのカウントダウン。リングが3秒かけて減り、中に残り秒数。押せば取り消し
+    private func countdown(for id: String) -> some View {
+        HStack(spacing: 8) {
+            Text("取り消し")
+                .font(.system(size: 12))
+                .foregroundStyle(dim)
+            TimelineView(.periodic(from: .now, by: 0.25)) { context in
+                let since = pendingSince[id] ?? context.date
+                let elapsed = context.date.timeIntervalSince(since)
+                let remaining = max(0, completionGrace - elapsed)
+                ZStack {
+                    Circle()
+                        .stroke(edge, lineWidth: 2.5)
+                    Circle()
+                        .trim(from: 0, to: remaining / completionGrace)
+                        .stroke(FaceStyle.reminder, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Text("\(Int(remaining.rounded(.up)))")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                }
+                .frame(width: 24, height: 24)
+            }
+        }
     }
 
     private func draftBinding(_ item: ReminderSource.Item) -> Binding<String> {
@@ -296,15 +322,18 @@ struct ContentView: View {
     private func toggleComplete(_ item: ReminderSource.Item) {
         if let task = pending.removeValue(forKey: item.id) {
             task.cancel()
+            pendingSince[item.id] = nil
             Haptic.warning()
             return
         }
         Haptic.success()
+        pendingSince[item.id] = .now
         pending[item.id] = Task {
             try? await Task.sleep(for: .seconds(completionGrace))
             guard !Task.isCancelled else { return }
             await source.complete(id: item.id)
             pending[item.id] = nil
+            pendingSince[item.id] = nil
         }
     }
 
