@@ -75,7 +75,7 @@ struct WatchContentView: View {
                         .foregroundStyle(.secondary)
                     Text(item.title)
                         .font(index == 0 ? .headline : .body)
-                        .foregroundStyle(FaceStyle.reminder)
+                        .foregroundStyle(FaceStyle.color(.reminder, layout: session.tasks.layout))
                         .lineLimit(2)
                     Spacer(minLength: 0)
                 }
@@ -89,7 +89,7 @@ struct WatchContentView: View {
                     .foregroundStyle(.secondary)
                 Text(item.displayText)
                     .font(index == 0 ? .headline : .body)
-                    .foregroundStyle(FaceStyle.event)
+                    .foregroundStyle(FaceStyle.color(.event, layout: session.tasks.layout))
                     .lineLimit(2)
                 Spacer(minLength: 0)
             }

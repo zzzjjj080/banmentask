@@ -4,3 +4,7 @@ xcuserdata/
 .DS_Store
 build/
 DerivedData/
+
+# xcodegen が生成する
+**/Info.plist
+**/*.entitlements

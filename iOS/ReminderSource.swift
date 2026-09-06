@@ -1,5 +1,6 @@
 import Foundation
 import EventKit
+import WidgetKit
 
 /// EventKit から「対象リスト」の未完了リマインダーと、今日の予定を読み、
 /// 文字盤に送る FacePayload を組み立てる。並び順は priority(1〜9) に焼き込む。
@@ -25,38 +26,32 @@ final class ReminderSource: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published var listName: String {
         didSet {
-            UserDefaults.standard.set(listName, forKey: Self.listNameKey)
+            LayoutStore.listName = listName
             Task { await reload() }
         }
     }
     @Published var layout: FaceLayout {
         didSet {
-            Self.saveLayout(layout)
+            LayoutStore.save(layout)
             Task { await reload() }
         }
     }
 
-    static let listNameKey = "listName"
-    static let layoutKey = "faceLayout"
     /// 送るリマインダーの件数。最大4行＋埋め草の分
     static let reminderCount = 6
-
-    static func loadLayout() -> FaceLayout {
-        guard let data = UserDefaults.standard.data(forKey: layoutKey),
-              let l = try? JSONDecoder().decode(FaceLayout.self, from: data) else { return .default }
-        return l.clamped
-    }
-    static func saveLayout(_ l: FaceLayout) {
-        UserDefaults.standard.set(try? JSONEncoder().encode(l.clamped), forKey: layoutKey)
-    }
 
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
     private var isCommitting = false
 
     init() {
-        listName = UserDefaults.standard.string(forKey: Self.listNameKey) ?? "基本"
-        layout = Self.loadLayout()
+        // 旧バージョンは UserDefaults.standard に保存していたので、1回だけ引き継ぐ
+        if let old = UserDefaults.standard.string(forKey: "listName") {
+            LayoutStore.listName = old
+            UserDefaults.standard.removeObject(forKey: "listName")
+        }
+        listName = LayoutStore.listName
+        layout = LayoutStore.load()
         // 純正アプリ側の変更（完了・追加・編集・予定の変更）を拾って再読込する
         observer = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged, object: store, queue: .main
@@ -119,6 +114,8 @@ final class ReminderSource: ObservableObject {
 
         calendarGranted = EventSource.isAuthorized
         events = layout.usesCalendar ? EventSource.upcoming24h(store) : []
+        // ホーム画面ウィジェットにも反映
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     static func order(_ a: Item, _ b: Item) -> Bool {
@@ -221,8 +218,8 @@ final class ReminderSource: ObservableObject {
     static func fetchFacePayload() async -> FacePayload? {
         guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return nil }
         let store = EKEventStore()
-        let listName = UserDefaults.standard.string(forKey: listNameKey) ?? "基本"
-        let layout = loadLayout()
+        let listName = LayoutStore.listName
+        let layout = LayoutStore.load()
         guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
         else { return nil }
 

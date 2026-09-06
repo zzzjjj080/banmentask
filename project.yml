@@ -52,6 +52,31 @@ targets:
         SUPPORTS_MACCATALYST: false
     dependencies:
       - target: BanmenTaskWatch
+      - target: BanmenTaskHomeWidget
+
+  # ─────────────────────────── iPhone ホーム画面ウィジェット ───────────────────────────
+  BanmenTaskHomeWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: HomeWidget
+      - path: Shared
+    info:
+      path: HomeWidget/Info.plist
+      properties:
+        CFBundleDisplayName: 盤面タスク
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSRemindersFullAccessUsageDescription: ホーム画面のウィジェットからリマインダーを表示・完了するために使います
+    entitlements:
+      path: HomeWidget/BanmenTaskHomeWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zzzjjj080.banmentask
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zzzjjj080.banmentask.homewidget
+        TARGETED_DEVICE_FAMILY: "1"
 
   # ─────────────────────────── Watch アプリ ───────────────────────────
   BanmenTaskWatch:

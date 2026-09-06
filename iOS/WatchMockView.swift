@@ -6,6 +6,7 @@ import SwiftUI
 /// 横長スロットの描画ルールは実際のウィジェットと同じ（2行同じフォント、長い方に合わせて一緒に縮む）。
 struct WatchMockView: View {
     let lines: [FaceLine]
+    let layout: FaceLayout
 
     private let caseW: CGFloat = 232
     private let caseH: CGFloat = 282
@@ -122,7 +123,7 @@ struct WatchMockView: View {
 
     /// 盤面タスクの横長スロット。実際のウィジェットと同じ描画ルール。
     private var rectangularSlot: some View {
-        (lines.isEmpty ? Text("タスクなし").foregroundStyle(Color(white: 0.5)) : FaceStyle.coloredText(lines))
+        (lines.isEmpty ? Text("タスクなし").foregroundStyle(Color(white: 0.5)) : FaceStyle.coloredText(lines, layout: layout))
             .font(.system(size: 18, weight: .semibold))
             .lineLimit(max(1, lines.count))
             .minimumScaleFactor(0.4)

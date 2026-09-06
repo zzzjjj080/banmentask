@@ -3,7 +3,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b22"
+    static let marker = "b23"
 }
 
 enum AppGroup {
@@ -19,16 +19,32 @@ struct FaceLayout: Codable, Equatable {
     static let maxLines = 4
     var lines: Int          // 1〜maxLines
     var calendarSlots: Int  // 0〜lines
+    var reminderColor: Int  // FaceStyle.palette の添字
+    var eventColor: Int
 
     static let `default` = FaceLayout(lines: 2, calendarSlots: 0)
 
-    init(lines: Int, calendarSlots: Int) {
+    init(lines: Int, calendarSlots: Int, reminderColor: Int = 2, eventColor: Int = 9) {
         self.lines = lines
         self.calendarSlots = calendarSlots
+        self.reminderColor = reminderColor
+        self.eventColor = eventColor
     }
-    init(reminders: Int, calendar: Int) {
-        self.init(lines: reminders + calendar, calendarSlots: calendar)
+    init(reminders: Int, calendar: Int, reminderColor: Int = 2, eventColor: Int = 9) {
+        self.init(lines: reminders + calendar, calendarSlots: calendar,
+                  reminderColor: reminderColor, eventColor: eventColor)
     }
+
+    /// 古い保存データ（色なし）も読めるようにする
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        lines = try c.decode(Int.self, forKey: .lines)
+        calendarSlots = try c.decode(Int.self, forKey: .calendarSlots)
+        reminderColor = try c.decodeIfPresent(Int.self, forKey: .reminderColor) ?? 2
+        eventColor = try c.decodeIfPresent(Int.self, forKey: .eventColor) ?? 9
+    }
+
+    func color(_ kind: FaceItem.Kind) -> Int { kind == .reminder ? reminderColor : eventColor }
 
     var reminderSlots: Int { lines - calendarSlots }
     var usesCalendar: Bool { calendarSlots > 0 }
@@ -134,6 +150,50 @@ enum FaceComposer {
     static func changePoints(_ p: FacePayload, after now: Date) -> [Date] {
         guard p.layout.usesCalendar else { return [] }
         return p.events.compactMap(\.start).filter { $0 > now }.sorted()
+    }
+}
+
+// MARK: - 表示設定の保存（iPhone アプリ ⇄ iPhone のホームウィジェット）
+
+enum LayoutStore {
+    private static let key = "faceLayout"
+    private static let listKey = "listName"
+    private static var defaults: UserDefaults? { UserDefaults(suiteName: AppGroup.identifier) }
+
+    static func load() -> FaceLayout {
+        guard let data = defaults?.data(forKey: key),
+              let l = try? JSONDecoder().decode(FaceLayout.self, from: data) else { return .default }
+        return l.clamped
+    }
+    static func save(_ l: FaceLayout) {
+        defaults?.set(try? JSONEncoder().encode(l.clamped), forKey: key)
+    }
+    static var listName: String {
+        get { defaults?.string(forKey: listKey) ?? "基本" }
+        set { defaults?.set(newValue, forKey: listKey) }
+    }
+}
+
+// MARK: - 完了の猶予（iPhone のホームウィジェット用）
+
+/// ○を押してから完了するまでの3秒を、ウィジェット拡張の複数の呼び出しで共有する。
+enum PendingStore {
+    static let grace: TimeInterval = 3
+    private static let key = "pendingCompletions"
+    private static var defaults: UserDefaults? { UserDefaults(suiteName: AppGroup.identifier) }
+
+    /// id → 押した時刻
+    static func load() -> [String: Date] {
+        guard let data = defaults?.data(forKey: key),
+              let d = try? JSONDecoder().decode([String: Date].self, from: data) else { return [:] }
+        // 古いものは捨てる
+        return d.filter { Date.now.timeIntervalSince($0.value) < grace + 30 }
+    }
+    static func save(_ d: [String: Date]) {
+        defaults?.set(try? JSONEncoder().encode(d), forKey: key)
+    }
+    static func deadline(for id: String) -> Date? {
+        load()[id].map { $0.addingTimeInterval(grace) }
     }
 }
 

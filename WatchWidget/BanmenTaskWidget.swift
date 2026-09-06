@@ -57,7 +57,7 @@ struct BanmenTaskWidgetView: View {
     /// 改行で繋いだ1つの Text に lineLimit をかけ、長い方に合わせて両方を同じ倍率で縮める。
     private var rectangular: some View {
         let lines = entry.faceLines
-        return (lines.isEmpty ? Text("タスクなし") : FaceStyle.coloredText(lines))
+        return (lines.isEmpty ? Text("タスクなし") : FaceStyle.coloredText(lines, layout: entry.payload.layout))
             .font(.system(size: 24, weight: .semibold))
             .lineLimit(max(1, lines.count))
             .minimumScaleFactor(0.4)

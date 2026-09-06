@@ -158,10 +158,12 @@ struct ContentView: View {
 
     private var layoutPicker: some View {
         VStack(spacing: 8) {
-            stepper("リマインダー", color: FaceStyle.reminder, value: source.layout.reminderSlots) { delta in
+            stepper("リマインダー", colorIndex: source.layout.reminderColor, value: source.layout.reminderSlots,
+                    cycleColor: { var l = source.layout; l.reminderColor = FaceStyle.next(l.reminderColor); source.layout = l }) { delta in
                 change(reminders: source.layout.reminderSlots + delta, calendar: source.layout.calendarSlots)
             }
-            stepper("カレンダー", color: FaceStyle.event, value: source.layout.calendarSlots) { delta in
+            stepper("カレンダー", colorIndex: source.layout.eventColor, value: source.layout.calendarSlots,
+                    cycleColor: { var l = source.layout; l.eventColor = FaceStyle.next(l.eventColor); source.layout = l }) { delta in
                 change(reminders: source.layout.reminderSlots, calendar: source.layout.calendarSlots + delta)
             }
         }
@@ -178,12 +180,25 @@ struct ContentView: View {
             return
         }
         Haptic.select()
-        source.layout = FaceLayout(reminders: reminders, calendar: calendar)
+        source.layout = FaceLayout(reminders: reminders, calendar: calendar,
+                                   reminderColor: source.layout.reminderColor, eventColor: source.layout.eventColor)
     }
 
-    private func stepper(_ label: String, color: Color, value: Int, step: @escaping (Int) -> Void) -> some View {
+    private func stepper(_ label: String, colorIndex: Int, value: Int,
+                         cycleColor: @escaping () -> Void, step: @escaping (Int) -> Void) -> some View {
         HStack(spacing: 10) {
-            Circle().fill(color).frame(width: 8, height: 8)
+            // 色チップ。タップするたびに15色を順ぐり
+            Button {
+                Haptic.select()
+                cycleColor()
+            } label: {
+                ZStack {
+                    Circle().fill(FaceStyle.color(colorIndex))
+                    Circle().strokeBorder(Color.white.opacity(0.35), lineWidth: 1)
+                }
+                .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
             Text(label)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white)
@@ -216,7 +231,7 @@ struct ContentView: View {
 
     private var watchMock: some View {
         VStack(spacing: 8) {
-            WatchMockView(lines: FaceComposer.exampleLines(source.layout))
+            WatchMockView(lines: FaceComposer.exampleLines(source.layout), layout: source.layout)
             Text("時計にはこの順で出ます")
                 .font(.system(size: 12))
                 .foregroundStyle(dim)
@@ -240,9 +255,9 @@ struct ContentView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .strokeBorder(onFace ? FaceStyle.reminder : dim, lineWidth: 1.5)
+                        .strokeBorder(onFace ? FaceStyle.color(source.layout.reminderColor) : dim, lineWidth: 1.5)
                     if isPending {
-                        Circle().fill(FaceStyle.reminder)
+                        Circle().fill(FaceStyle.color(source.layout.reminderColor))
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.black)
@@ -291,7 +306,7 @@ struct ContentView: View {
                         .stroke(edge, lineWidth: 2.5)
                     Circle()
                         .trim(from: 0, to: remaining / completionGrace)
-                        .stroke(FaceStyle.reminder, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .stroke(FaceStyle.color(source.layout.reminderColor), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     Text("\(Int(remaining.rounded(.up)))")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
