@@ -191,12 +191,18 @@ struct ContentView: View {
         let remaining = Double(session.remainingTransfers)
         return VStack(spacing: 18) {
             // 経路
-            HStack(spacing: 0) {
-                node("iphone", label: "iPhone", ok: true)
-                link(ok: watchOK)
-                node("applewatch", label: session.isPaired ? "Watch" : "未ペアリング", ok: watchOK)
-                link(ok: faceOK)
-                node("rectangle.inset.filled", label: faceOK ? "文字盤" : "未配置", ok: faceOK)
+            VStack(spacing: 10) {
+                HStack(spacing: 0) {
+                    node("iphone", label: "iPhone", ok: true)
+                    link(ok: watchOK)
+                    node("applewatch", label: session.isPaired ? "Watch" : "未ペアリング", ok: watchOK)
+                    link(ok: faceOK)
+                    node("rectangle.inset.filled", label: faceOK ? "文字盤" : "未配置", ok: faceOK)
+                }
+                Text(connectionSummary(watchOK: watchOK, faceOK: faceOK))
+                    .font(.system(size: 13))
+                    .foregroundStyle(faceOK ? Color.green : Color.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // 転送枠
@@ -222,6 +228,10 @@ struct ContentView: View {
                     }
                 }
                 .frame(height: 4)
+                Text("文字盤を裏で即時更新できる1日の回数。上位2件が変わった時だけ使う。0になっても文字盤をタップすれば反映される")
+                    .font(.system(size: 11))
+                    .foregroundStyle(dim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // 手動送信（60秒クールダウン）
@@ -255,6 +265,14 @@ struct ContentView: View {
         .padding(18)
         .background(panel, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(edge, lineWidth: 1))
+    }
+
+    /// いまの接続状態を1行で言う。線が途切れている場所ごとに、何をすればいいかを添える。
+    private func connectionSummary(watchOK: Bool, faceOK: Bool) -> String {
+        if !session.isPaired { return "Apple Watch とペアリングされていません" }
+        if !session.isWatchAppInstalled { return "Watch に盤面タスクが入っていません。iPhone の Watch アプリからインストール" }
+        if !session.isComplicationEnabled { return "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク" }
+        return "接続OK。変更は数秒で文字盤に反映されます"
     }
 
     /// 経路上の1点。丸の中にアイコン、下にラベル。OK なら白、そうでなければ薄く。
