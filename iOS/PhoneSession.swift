@@ -47,6 +47,15 @@ final class PhoneSession: NSObject, ObservableObject {
         }
     }
 
+    /// Watch から頼まれて返事で渡した時に呼ぶ。転送枠は使わず、
+    /// applicationContext（無制限）と「前回送信分」だけ更新する。
+    func noteDelivered(_ payload: FacePayload, reason: String) {
+        try? WCSession.default.updateApplicationContext(payload.payload)
+        UserDefaults.standard.set(payload.signature, forKey: Self.lastSentKey)
+        let stamp = Date.now.formatted(date: .omitted, time: .shortened)
+        lastResult = "\(stamp) \(reason): Watch に直接返答（転送枠は消費しない）"
+    }
+
     /// 2経路で送る。
     /// - applicationContext: 「最新状態」を1つだけ保持し、Watch アプリ起動時に必ず届く
     /// - transferCurrentComplicationUserInfo: Watch アプリを裏で起こしてまで届ける（1日50回まで）
@@ -109,14 +118,16 @@ extension PhoneSession: WCSessionDelegate {
         Task {
             switch message["request"] as? String {
             case "refresh":
-                let tasks = await BackgroundRefresh.refreshAndSend(reason: "watch", force: false)
-                replyHandler(tasks?.payload ?? [:])
+                let payload = await ReminderSource.fetchFacePayload()
+                if let payload { await noteDelivered(payload, reason: "watch") }
+                replyHandler(payload?.payload ?? [:])
             case "complete":
                 if let id = message["id"] as? String {
                     _ = await ReminderSource.completeHeadless(id: id)
                 }
-                let tasks = await BackgroundRefresh.refreshAndSend(reason: "watch完了", force: true)
-                replyHandler(tasks?.payload ?? [:])
+                let payload = await ReminderSource.fetchFacePayload()
+                if let payload { await noteDelivered(payload, reason: "watch完了") }
+                replyHandler(payload?.payload ?? [:])
             default:
                 replyHandler([:])
             }

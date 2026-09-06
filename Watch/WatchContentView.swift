@@ -25,24 +25,28 @@ struct WatchContentView: View {
 
             Spacer()
 
-            HStack {
-                if let error = session.lastError {
-                    Text(error).font(.footnote).foregroundStyle(.red).lineLimit(1)
-                } else {
-                    Text(session.tasks.updatedAt, style: .relative)
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer()
-                Button {
-                    WKInterfaceDevice.current().play(.click)
-                    session.requestRefresh()
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.plain)
-                .disabled(session.isBusy)
+            if let error = session.lastError {
+                Text(error).font(.footnote).foregroundStyle(.red).lineLimit(1)
+            } else {
+                Text(session.tasks.updatedAt, style: .relative)
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
             }
+
+            Button {
+                WKInterfaceDevice.current().play(.click)
+                session.requestRefresh()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: session.isBusy ? "hourglass" : "arrow.clockwise")
+                    Text(session.isBusy ? "更新中…" : "iPhone から更新")
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color(white: 0.25))
+            .disabled(session.isBusy)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
