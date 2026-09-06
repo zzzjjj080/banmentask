@@ -10,6 +10,8 @@ struct ContentView: View {
     @State private var newTitle = ""
     @State private var renaming: ReminderSource.Item?
     @State private var renameTitle = ""
+    @State private var cooldownUntil: Date = .distantPast   // 手動送信の連打防止
+    private let cooldown: TimeInterval = 60
 
     private let bg = Color.black
     private let panel = Color(white: 0.09)
@@ -18,12 +20,12 @@ struct ContentView: View {
 
     var body: some View {
         List {
-            // ── 文字盤プレビュー ──────────────────────────────
+            // ── リスト切替 ────────────────────────────────────
             Section {
-                facePreview
+                HStack { listMenu; Spacer() }
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
             }
 
             // ── タスク ────────────────────────────────────────
@@ -62,7 +64,15 @@ struct ContentView: View {
                 statusGrid
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 24, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+            }
+
+            // ── 文字盤プレビュー（一番下）─────────────────────
+            Section {
+                watchMock
+                    .listRowBackground(bg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 32, trailing: 16))
             }
         }
         .listStyle(.plain)
@@ -99,35 +109,68 @@ struct ContentView: View {
         .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
     }
 
-    // MARK: - 文字盤プレビュー
+    // MARK: - 文字盤プレビュー（Apple Watch の形）
 
-    private var facePreview: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("WATCH FACE")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(dim)
-                    .tracking(1.5)
-                Spacer()
-                listMenu
+    /// 実際の文字盤と同じルールで描く: 2行とも同じフォント、長い方に合わせて一緒に縮む。
+    private var watchMock: some View {
+        let lines = source.faceTasks.lines
+        let caseColor = Color(white: 0.22)
+        let caseEdge = Color(white: 0.38)
+        return VStack(spacing: 10) {
+            ZStack {
+                // バンド
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(white: 0.14))
+                    .frame(width: 120, height: 320)
+                // ケース
+                RoundedRectangle(cornerRadius: 46, style: .continuous)
+                    .fill(caseColor)
+                    .overlay(RoundedRectangle(cornerRadius: 46, style: .continuous).stroke(caseEdge, lineWidth: 2))
+                    .frame(width: 216, height: 262)
+                // デジタルクラウン
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(caseEdge)
+                    .frame(width: 10, height: 40)
+                    .offset(x: 112, y: -50)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(caseEdge)
+                    .frame(width: 7, height: 52)
+                    .offset(x: 110, y: 20)
+                // 画面
+                RoundedRectangle(cornerRadius: 38, style: .continuous)
+                    .fill(.black)
+                    .frame(width: 190, height: 236)
+                    .overlay(alignment: .top) {
+                        VStack(spacing: 0) {
+                            HStack {
+                                Spacer()
+                                Text(Date.now, style: .time)
+                                    .font(.system(size: 22, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.white)
+                            }
+                            .padding(.top, 18)
+                            .padding(.trailing, 20)
+                            Spacer()
+                            // 横長スロット（実際のコンプリケーション）
+                            Text(lines.isEmpty ? "タスクなし" : lines.joined(separator: "\n"))
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(lines.isEmpty ? dim : .white)
+                                .lineLimit(max(1, lines.count))
+                                .minimumScaleFactor(0.4)
+                                .frame(width: 154, height: 60, alignment: .leading)
+                                .padding(.horizontal, 8)
+                                .background(Color(white: 0.11), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            Spacer()
+                        }
+                    }
             }
-            VStack(alignment: .leading, spacing: 4) {
-                let lines = source.faceTasks.lines
-                Text(lines.first ?? "タスクなし")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(lines.isEmpty ? dim : .white)
-                    .lineLimit(1)
-                Text(lines.count > 1 ? lines[1] : " ")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(dim)
-                    .lineLimit(1)
-            }
-            .padding(.vertical, 4)
+            .frame(height: 300)
+            .clipped()
+            Text("時計ではこう見えます")
+                .font(.system(size: 12))
+                .foregroundStyle(dim)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(panel, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(edge, lineWidth: 1))
+        .frame(maxWidth: .infinity)
     }
 
     private var listMenu: some View {
@@ -193,22 +236,29 @@ struct ContentView: View {
                 tile("文字盤に配置", ok: session.isComplicationEnabled)
                 tile("残り転送 / 日", value: "\(session.remainingTransfers)")
                 tile("ビルド", value: BuildInfo.marker)
-                Button {
-                    send(force: true, reason: "手動")
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.up.forward.app")
-                        Text("いま送る")
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let remaining = Int(cooldownUntil.timeIntervalSince(context.date).rounded(.up))
+                    let waiting = remaining > 0
+                    Button {
+                        cooldownUntil = Date.now.addingTimeInterval(cooldown)
+                        send(force: true, reason: "手動")
+                    } label: {
+                        HStack {
+                            Image(systemName: waiting ? "hourglass" : "arrow.up.forward.app")
+                            Text(waiting ? "あと \(remaining) 秒" : "いま送る")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(waiting ? dim : .black)
+                        .frame(maxWidth: .infinity, minHeight: 60)
+                        .background(waiting ? panel : .white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(waiting ? edge : .clear, lineWidth: 1))
                     }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity, minHeight: 54)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .buttonStyle(.plain)
+                    .disabled(waiting)
                 }
-                .buttonStyle(.plain)
             }
             Text(session.lastResult)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.system(size: 13, design: .monospaced))
                 .foregroundStyle(dim)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(2)
@@ -218,7 +268,7 @@ struct ContentView: View {
     private func tile(_ label: String, ok: Bool) -> some View {
         tileBody(label) {
             Image(systemName: ok ? "checkmark" : "xmark")
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(ok ? Color.green : Color.red)
         }
     }
@@ -226,7 +276,7 @@ struct ContentView: View {
     private func tile(_ label: String, value: String) -> some View {
         tileBody(label) {
             Text(value)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
         }
     }
@@ -234,14 +284,13 @@ struct ContentView: View {
     private func tileBody<V: View>(_ label: String, @ViewBuilder value: () -> V) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(dim)
-                .tracking(0.5)
             Spacer()
             value()
         }
         .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, minHeight: 54)
+        .frame(maxWidth: .infinity, minHeight: 60)
         .background(panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(edge, lineWidth: 1))
     }

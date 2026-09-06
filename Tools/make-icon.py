@@ -25,10 +25,10 @@ def bar(d, x, y, w, h, color):
 
 def render_watch():
     """Apple Watch の輪郭の中に、文字盤のコンプリケーションを描く。"""
-    BG = (28, 28, 30)
-    BAND = (44, 44, 46)
-    CASE = (62, 62, 66)
-    EDGE = (110, 110, 114)
+    BG = (255, 255, 255)
+    BAND = (70, 70, 74)
+    CASE = (52, 52, 56)
+    EDGE = (120, 120, 124)
     img = Image.new("RGB", (SIZE, SIZE), BG)
     d = ImageDraw.Draw(img)
 
