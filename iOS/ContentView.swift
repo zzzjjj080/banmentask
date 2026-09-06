@@ -16,10 +16,10 @@ struct ContentView: View {
     @State private var newTitle = ""
     @FocusState private var addFocused: Bool
 
-    // 完了は猶予つき。○を押すと打ち消し線になり、3秒後に本当に完了する。その間にもう一度押せば取り消し
+    // 完了は猶予つき。○を押すと打ち消し線になり、5秒後に本当に完了する。その間にもう一度押せば取り消し
     @State private var pending: [String: Task<Void, Never>] = [:]
     @State private var pendingSince: [String: Date] = [:]
-    private let completionGrace: TimeInterval = 3
+    private let completionGrace: TimeInterval = PendingStore.grace
 
     @State private var cooldownUntil: Date = .distantPast   // 手動送信の連打防止
     private let cooldown: TimeInterval = 60
@@ -239,7 +239,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - タスク行（タップでその場編集、○は3秒の猶予つき完了）
+    // MARK: - タスク行（タップでその場編集、○は5秒の猶予つき完了）
 
     /// いま文字盤に出ているリマインダーの id
     private var onFaceIDs: Set<String> {
@@ -291,7 +291,7 @@ struct ContentView: View {
         .padding(.vertical, 6)
     }
 
-    /// 完了までのカウントダウン。リングが3秒かけて減り、中に残り秒数。押せば取り消し
+    /// 完了までのカウントダウン。リングが5秒かけて減り、中に残り秒数。押せば取り消し
     private func countdown(for id: String) -> some View {
         HStack(spacing: 8) {
             Text("取り消し")
@@ -334,7 +334,7 @@ struct ContentView: View {
         Task { await source.rename(id: id, title: draft) }
     }
 
-    /// ○を押す → 3秒後に完了。その間にもう一度押すと取り消し。
+    /// ○を押す → 5秒後に完了。その間にもう一度押すと取り消し。
     private func toggleComplete(_ item: ReminderSource.Item) {
         if let task = pending.removeValue(forKey: item.id) {
             task.cancel()

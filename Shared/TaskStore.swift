@@ -3,7 +3,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b26"
+    static let marker = "b27"
 }
 
 enum AppGroup {
@@ -176,9 +176,9 @@ enum LayoutStore {
 
 // MARK: - 完了の猶予（iPhone のホームウィジェット用）
 
-/// ○を押してから完了するまでの3秒を、ウィジェット拡張の複数の呼び出しで共有する。
+/// ○を押してから完了するまでの5秒を、ウィジェット拡張の複数の呼び出しで共有する。
 enum PendingStore {
-    static let grace: TimeInterval = 3
+    static let grace: TimeInterval = 5
     private static let key = "pendingCompletions"
     private static var defaults: UserDefaults? { UserDefaults(suiteName: AppGroup.identifier) }
 

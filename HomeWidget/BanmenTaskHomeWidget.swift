@@ -50,7 +50,7 @@ enum HomeReminders {
         try? store.save(reminder, commit: true)
     }
 
-    /// 猶予（3秒）を過ぎたものを本当に完了させる。タイムライン生成とインテントの両方から呼ぶ。
+    /// 猶予（5秒）を過ぎたものを本当に完了させる。タイムライン生成とインテントの両方から呼ぶ。
     static func settleExpired(now: Date = .now) {
         var pending = PendingStore.load()
         let expired = pending.filter { now.timeIntervalSince($0.value) >= PendingStore.grace }
@@ -63,7 +63,7 @@ enum HomeReminders {
     }
 }
 
-// MARK: - ○を押した時の動き（3秒後に完了。その間にもう一度押せば取り消し）
+// MARK: - ○を押した時の動き（5秒後に完了。その間にもう一度押せば取り消し）
 
 struct ToggleCompleteIntent: AppIntent {
     static var title: LocalizedStringResource = "完了 / 取り消し"
@@ -75,7 +75,7 @@ struct ToggleCompleteIntent: AppIntent {
     init(id: String) { self.id = id }
 
     /// ウィジェットはインテントが終わるまで再描画しないので、ここでは待たずに即返す。
-    /// 3秒後の再描画（タイムラインの .after）で settleExpired が本当に完了させる。
+    /// 5秒後の再描画（タイムラインの .after）で settleExpired が本当に完了させる。
     func perform() async throws -> some IntentResult {
         HomeReminders.settleExpired()
         var pending = PendingStore.load()
@@ -106,11 +106,20 @@ struct HomeProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<HomeEntry>) -> Void) {
         let e = entry(for: context)
-        // 猶予中の項目があればその完了時刻で、なければ15分後に読み直す
         let deadlines = e.items.compactMap(\.deadline).filter { $0 > .now }
-        let next = deadlines.min().map { $0.addingTimeInterval(0.5) }
-            ?? Calendar.current.date(byAdding: .minute, value: 15, to: .now)!
-        completion(Timeline(entries: [e], policy: .after(next)))
+        guard let last = deadlines.max() else {
+            // 猶予中の項目がなければ15分後に読み直す
+            completion(Timeline(entries: [e], policy: .after(Calendar.current.date(byAdding: .minute, value: 15, to: .now)!)))
+            return
+        }
+        // 猶予中は1秒ごとの entry を並べて残り秒数を数字で出す（最大でも6枚）
+        var entries: [HomeEntry] = [e]
+        var t = e.date.addingTimeInterval(1)
+        while t < last {
+            entries.append(HomeEntry(date: t, listName: e.listName, items: e.items, layout: e.layout))
+            t += 1
+        }
+        completion(Timeline(entries: entries, policy: .after(last.addingTimeInterval(0.5))))
     }
 
     private func entry(for context: Context) -> HomeEntry {
@@ -149,6 +158,7 @@ struct HomeWidgetView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
+        .padding(.horizontal, -5)                 // 標準の余白が広めなので少し詰める
         .containerBackground(.black, for: .widget)
     }
 
@@ -190,14 +200,14 @@ struct HomeWidgetView: View {
             Spacer(minLength: 2)
 
             if waiting, let deadline = item.deadline {
-                // 3秒で減るリングと残り秒数。ウィジェットでも動く
+                // 5秒で減るリングと残り秒数。ウィジェットでも動く
                 ZStack {
                     ProgressView(timerInterval: deadline.addingTimeInterval(-PendingStore.grace)...deadline,
                                  countsDown: true, label: { EmptyView() }, currentValueLabel: { EmptyView() })
                         .progressViewStyle(.circular)
                         .tint(tint)
-                    Text(timerInterval: entry.date...deadline, countsDown: true, showsHours: false)
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                    Text("\(max(1, Int(deadline.timeIntervalSince(entry.date).rounded(.up))))")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.white)
                 }
@@ -219,7 +229,7 @@ struct BanmenTaskHomeWidget: Widget {
             HomeWidgetView(entry: entry)
         }
         .configurationDisplayName("盤面タスク")
-        .description("リマインダーをホーム画面から完了できます。○を押して3秒以内なら取り消せます。")
+        .description("リマインダーをホーム画面から完了できます。○を押して5秒以内なら取り消せます。")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
