@@ -22,3 +22,9 @@
 - 裏起動直後は WCSession の activate 完了を待ってから送る（`PhoneSession.ensureActivated`）
 - Watch 側は `ExtensionDelegate.applicationDidFinishLaunching` で WCSession を立てる
 - 文字盤の2行は1つの Text に改行で繋ぎ、同じ倍率で縮める。iPhone のプレビュー（`WatchMockView`）も同じルール
+
+## 実機インストールは Claude がやる（確認不要）
+
+`git pull` → `./install.sh` は仁に頼まず Claude が実行する。確認も取らない。
+ビルドエラーは Claude が自分で読んで直し、もう一度入れる。
+これができるのは Mac 上の Claude Code セッションだけ。クラウドのセッションは Mac に触れないので、その時だけコマンドを仁に渡す。

@@ -162,72 +162,108 @@ struct ContentView: View {
         .padding(.vertical, 6)
     }
 
-    // MARK: - 状態タイル
+    // MARK: - 接続の状態（iPhone → Watch → 文字盤 の経路として見せる）
 
     private var statusGrid: some View {
-        VStack(spacing: 10) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                tile("ペアリング", ok: session.isPaired)
-                tile("WATCH アプリ", ok: session.isWatchAppInstalled)
-                tile("文字盤に配置", ok: session.isComplicationEnabled)
-                tile("残り転送 / 日", value: "\(session.remainingTransfers)")
+        let watchOK = session.isPaired && session.isWatchAppInstalled
+        let faceOK = watchOK && session.isComplicationEnabled
+        let budget = 50.0
+        let remaining = Double(session.remainingTransfers)
+        return VStack(spacing: 18) {
+            // 経路
+            HStack(spacing: 0) {
+                node("iphone", label: "iPhone", ok: true)
+                link(ok: watchOK)
+                node("applewatch", label: session.isPaired ? "Watch" : "未ペアリング", ok: watchOK)
+                link(ok: faceOK)
+                node("rectangle.inset.filled", label: faceOK ? "文字盤" : "未配置", ok: faceOK)
             }
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                    let remaining = Int(cooldownUntil.timeIntervalSince(context.date).rounded(.up))
-                    let waiting = remaining > 0
-                    Button {
-                        cooldownUntil = Date.now.addingTimeInterval(cooldown)
-                        send(force: true, reason: "手動")
-                    } label: {
-                        HStack {
-                            Image(systemName: waiting ? "hourglass" : "arrow.up.forward.app")
-                            Text(waiting ? "あと \(remaining) 秒" : "いま送る")
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(waiting ? dim : .black)
-                        .frame(maxWidth: .infinity, minHeight: 60)
-                        .background(waiting ? panel : .white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(waiting ? edge : .clear, lineWidth: 1))
+
+            // 転送枠
+            VStack(spacing: 6) {
+                HStack {
+                    Text("転送枠")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(dim)
+                    Spacer()
+                    Text("\(session.remainingTransfers)")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    + Text(" / 50")
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundStyle(dim)
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color(white: 0.18))
+                        Capsule()
+                            .fill(remaining > 10 ? Color.white : Color.orange)
+                            .frame(width: geo.size.width * min(1, remaining / budget))
                     }
-                    .buttonStyle(.plain)
-                    .disabled(waiting)
+                }
+                .frame(height: 4)
             }
+
+            // 手動送信（60秒クールダウン）
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let left = Int(cooldownUntil.timeIntervalSince(context.date).rounded(.up))
+                let waiting = left > 0
+                Button {
+                    cooldownUntil = Date.now.addingTimeInterval(cooldown)
+                    send(force: true, reason: "手動")
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: waiting ? "hourglass" : "arrow.up")
+                        Text(waiting ? "あと \(left) 秒" : "いま送る")
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(waiting ? dim : .black)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(waiting ? Color(white: 0.14) : .white,
+                                in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(waiting)
+            }
+
             Text(session.lastResult)
-                .font(.system(size: 13, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(dim)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(2)
         }
+        .padding(18)
+        .background(panel, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(edge, lineWidth: 1))
     }
 
-    private func tile(_ label: String, ok: Bool) -> some View {
-        tileBody(label) {
-            Image(systemName: ok ? "checkmark" : "xmark")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(ok ? Color.green : Color.red)
-        }
-    }
-
-    private func tile(_ label: String, value: String) -> some View {
-        tileBody(label) {
-            Text(value)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-        }
-    }
-
-    private func tileBody<V: View>(_ label: String, @ViewBuilder value: () -> V) -> some View {
-        HStack {
+    /// 経路上の1点。丸の中にアイコン、下にラベル。OK なら白、そうでなければ薄く。
+    private func node(_ symbol: String, label: String, ok: Bool) -> some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(ok ? Color.white : Color.clear)
+                    .overlay(Circle().strokeBorder(ok ? Color.white : edge, lineWidth: 1.5))
+                Image(systemName: symbol)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(ok ? .black : dim)
+            }
+            .frame(width: 46, height: 46)
             Text(label)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(dim)
-            Spacer()
-            value()
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(ok ? .white : dim)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, minHeight: 60)
-        .background(panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(edge, lineWidth: 1))
+        .frame(width: 84)
+    }
+
+    /// 点と点を結ぶ線。通っていれば白、そうでなければ薄い破線風。
+    private func link(ok: Bool) -> some View {
+        Rectangle()
+            .fill(ok ? Color.white : edge)
+            .frame(height: 2)
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 26)   // ラベル分だけ上に寄せて丸の中心に合わせる
     }
 
     // MARK: - 操作
