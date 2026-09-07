@@ -22,6 +22,9 @@ struct ContentView: View {
     private let completionGrace: TimeInterval = PendingStore.grace
 
     @State private var cooldownUntil: Date = .distantPast   // 手動送信の連打防止
+
+    // 投げ銭。製品IDは App Store Connect と1文字違わず合わせる
+    @State private var tipJar = TipJar(productID: "com.zzzjjj080.banmentask.coffee")
     private let cooldown: TimeInterval = 60
 
     private let bg = Color.black
@@ -75,6 +78,10 @@ struct ContentView: View {
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 6, trailing: 16))
+                CoffeeTipSection(tipJar: tipJar)
+                    .listRowBackground(bg)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 18, leading: 16, bottom: 6, trailing: 16))
                 Text(BuildInfo.marker)
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(Color(white: 0.3))
