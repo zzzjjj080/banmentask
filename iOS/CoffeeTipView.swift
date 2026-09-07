@@ -68,7 +68,7 @@ struct CoffeeTipSection: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(tipJar.product == nil || tipJar.state == .purchasing)
+        .disabled(!tipJar.canTip || tipJar.state == .purchasing)
         .accessibilityIdentifier("buyCoffee")
     }
 

@@ -46,13 +46,34 @@ final class TipJar {
 
     /// 表示する金額はStoreKitが返すものをそのまま使う。
     /// 国によって価格も通貨も変わるため、アプリ側で「¥200」と決め打ちしてはいけない
-    var displayPrice: String? { product?.displayPrice }
+    var displayPrice: String? {
+        #if DEBUG
+        if let debugPrice { return debugPrice }
+        #endif
+        return product?.displayPrice
+    }
+
+    /// ボタンを押せるか。シミュレータでは本物の製品が取れないので、DEBUG では差し込んだ価格でも押せる扱い
+    var canTip: Bool {
+        #if DEBUG
+        if debugPrice != nil { return true }
+        #endif
+        return product != nil
+    }
+
+    #if DEBUG
+    /// スクリーンショット用。BT_PRICE=¥200 のように起動時の環境変数で渡す
+    private let debugPrice = ProcessInfo.processInfo.environment["BT_PRICE"]
+    #endif
 
     /// 画面が出るタイミングで呼ぶ。2回目以降は何もしない
     func load() async {
         startListening()
         await finishUnfinished()
 
+        #if DEBUG
+        if debugPrice != nil { state = .idle; return }
+        #endif
         guard product == nil, state != .loading else { return }
         state = .loading
         do {

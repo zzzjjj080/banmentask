@@ -78,7 +78,29 @@ final class ReminderSource: ObservableObject {
         }
         if layout.usesCalendar { await requestCalendarAccess() }
         await reload()
+        #if DEBUG
+        // スクリーンショット用の見本。シミュレータで BT_DEMO=1 を付けて起動した時だけ、空のリストに書き込む
+        if ProcessInfo.processInfo.environment["BT_DEMO"] != nil, items.isEmpty { await seedDemo() }
+        #endif
     }
+
+    #if DEBUG
+    private func seedDemo() async {
+        guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
+                ?? store.calendars(for: .reminder).first else { return }
+        listName = calendar.title
+        let titles = ["iPhone返送", "バットテープ巻く", "牛乳を買う", "図書館に本を返す", "振込", "写真を整理"]
+        for (i, title) in titles.enumerated() {
+            let r = EKReminder(eventStore: store)
+            r.title = title
+            r.calendar = calendar
+            r.priority = i < 4 ? i + 1 : 0
+            try? store.save(r, commit: false)
+        }
+        try? store.commit()
+        await reload()
+    }
+    #endif
 
     /// カレンダーは使うモードに切り替えた時に初めて聞く
     func requestCalendarAccess() async {
