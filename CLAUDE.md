@@ -12,6 +12,8 @@
 ## 入れ方
 
 `./install.sh` で xcodegen → xcodebuild → devicectl まで通る。Xcode を開く必要はない。
+**USB は要らない。** iPhone が Mac と同じ Wi-Fi にいれば Wi-Fi 越しに入る（2026-09-07 確認）。
+Watch は初回タイムアウトすることがあるので、失敗したら `./install.sh watch` を1回だけ再実行する。
 `project.yml` を変えた時も同じコマンドでよい（毎回生成し直す）。
 
 ## 設計の要点
