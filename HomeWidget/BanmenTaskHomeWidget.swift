@@ -124,8 +124,13 @@ struct HomeProvider: TimelineProvider {
 
     private func entry(for context: Context) -> HomeEntry {
         HomeReminders.settleExpired()
-        // 多めに読んで、表示側（ViewThatFits）が収まる行数まで削る
-        let limit = context.family == .systemLarge ? 14 : 6
+        // 多めに読んで、表示側が実際に収まる件数まで削る
+        let limit: Int
+        switch context.family {
+        case .systemLarge: limit = 20
+        case .systemMedium: limit = 10
+        default: limit = 6
+        }
         let listName = LayoutStore.listName
         return HomeEntry(date: .now, listName: listName,
                          items: HomeReminders.load(listName: listName, limit: limit),
@@ -134,6 +139,26 @@ struct HomeProvider: TimelineProvider {
 }
 
 // MARK: - 見た目（純正リマインダーのウィジェットと同じ作り。見出しなし、収まる分だけ表示）
+
+/// 行の寸法。ここだけで決めて、収まる件数の計算と実際の描画の両方で使う。
+private enum Metric {
+    static let font: CGFloat = 15
+    static let lineHeight: CGFloat = 18
+    static let circleSlot: CGFloat = 21      // ○ の当たり判定の幅
+    static let gap: CGFloat = 5              // ○ と題名のあいだ
+    /// 残り秒数の枠。**押していない時も同じだけ空けておく。**
+    /// 押した時にここが割り込むと題名の幅が縮んで折り返してしまうため（b32 で直した）。
+    static let badge: CGFloat = 19
+    static let rowGap: CGFloat = 3           // 行と行のあいだ
+    static let padLeading: CGFloat = 10
+    static let padTrailing: CGFloat = 8
+    static let padTop: CGFloat = 6
+    static let padBottom: CGFloat = 4
+
+    static func rowHeight(lines: Int) -> CGFloat {
+        max(circleSlot, CGFloat(lines) * lineHeight) + rowGap
+    }
+}
 
 struct HomeWidgetView: View {
     let entry: HomeEntry
@@ -149,30 +174,55 @@ struct HomeWidgetView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // 上から順に、はみ出さずに収まる最大の行数を選ぶ（長い題名は2行になるので可変）
-                ViewThatFits(in: .vertical) {
-                    ForEach(Array(stride(from: entry.items.count, through: 1, by: -1)), id: \.self) { count in
-                        list(Array(entry.items.prefix(count)))
+                GeometryReader { geo in
+                    let plan = plan(for: geo.size)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(plan.items) { item in
+                            row(item, lineLimit: plan.lineLimit)
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
-        .padding(.horizontal, -5)                 // 標準の余白が広めなので少し詰める
+        // 既定の余白（16pt）は contentMarginsDisabled で外してある。ここが実際の余白
+        .padding(.leading, Metric.padLeading)
+        .padding(.trailing, Metric.padTrailing)
+        .padding(.top, Metric.padTop)
+        .padding(.bottom, Metric.padBottom)
         .containerBackground(.black, for: .widget)
     }
 
-    private func list(_ items: [HomeItem]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(items) { item in
-                row(item)
-            }
+    // MARK: - 収まる件数を決める
+
+    /// 件数を優先する。1行ずつなら入る件数をまず出し、
+    /// **その件数のまま2行に伸ばしても収まる時だけ** 2行を許す。
+    /// 収まらないなら題名を1行に切って（右端を落として）件数を保つ。
+    private func plan(for size: CGSize) -> (items: [HomeItem], lineLimit: Int) {
+        let textWidth = size.width - Metric.circleSlot - Metric.gap - Metric.badge
+        let oneLine = Metric.rowHeight(lines: 1)
+        let maxCount = max(1, Int(size.height / oneLine))
+        let items = Array(entry.items.prefix(maxCount))
+
+        let needed = items.reduce(CGFloat.zero) { total, item in
+            let lines = estimatedWidth(item.title) <= textWidth * 0.95 ? 1 : 2
+            return total + Metric.rowHeight(lines: lines)
+        }
+        return (items, needed <= size.height ? 2 : 1)
+    }
+
+    /// 題名の幅の見当。全角はフォントの大きさ、半角はその半分強で数える。
+    private func estimatedWidth(_ title: String) -> CGFloat {
+        title.unicodeScalars.reduce(CGFloat.zero) { width, scalar in
+            width + (scalar.value < 0x2E80 ? Metric.font * 0.55 : Metric.font)
         }
     }
 
-    private func row(_ item: HomeItem) -> some View {
+    // MARK: - 1行
+
+    private func row(_ item: HomeItem, lineLimit: Int) -> some View {
         let waiting = (item.deadline ?? .distantPast) > entry.date
-        return HStack(alignment: .top, spacing: 6) {
+        return HStack(alignment: .top, spacing: Metric.gap) {
             Button(intent: ToggleCompleteIntent(id: item.id)) {
                 ZStack {
                     Circle().strokeBorder(waiting ? tint : Color(white: 0.45), lineWidth: 1.5)
@@ -183,25 +233,25 @@ struct HomeWidgetView: View {
                             .foregroundStyle(.black)
                     }
                 }
-                .frame(width: 20, height: 20)
-                .frame(width: 24, height: 26)        // 左端に寄せつつ縦の当たり判定は行いっぱい
+                .frame(width: 18, height: 18)
+                .frame(width: Metric.circleSlot, height: Metric.circleSlot)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             Text(item.title)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: Metric.font, weight: .medium))
                 .foregroundStyle(waiting ? Color(white: 0.5) : .white)
                 .strikethrough(waiting, color: Color(white: 0.5))
-                .lineLimit(2)
+                .lineLimit(lineLimit)
+                .truncationMode(.tail)          // 入らない分は右端を落とす。折り返さない
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
 
-            Spacer(minLength: 2)
-
-            if waiting, let deadline = item.deadline {
-                // 5秒で減るリングと残り秒数。ウィジェットでも動く
-                ZStack {
+            // 押していない時も同じ幅を占める。押した瞬間に題名の幅が変わらないように
+            ZStack {
+                if waiting, let deadline = item.deadline {
                     ProgressView(timerInterval: deadline.addingTimeInterval(-PendingStore.grace)...deadline,
                                  countsDown: true, label: { EmptyView() }, currentValueLabel: { EmptyView() })
                         .progressViewStyle(.circular)
@@ -211,11 +261,11 @@ struct HomeWidgetView: View {
                         .monospacedDigit()
                         .foregroundStyle(.white)
                 }
-                .frame(width: 22, height: 22)
-                .padding(.top, 2)
             }
+            .frame(width: Metric.badge, height: Metric.badge)
         }
-        .padding(.vertical, 1)
+        .frame(minHeight: Metric.circleSlot, alignment: .top)
+        .padding(.bottom, Metric.rowGap)
     }
 }
 
@@ -231,6 +281,8 @@ struct BanmenTaskHomeWidget: Widget {
         .configurationDisplayName("盤面タスク")
         .description("リマインダーをホーム画面から完了できます。○を押して5秒以内なら取り消せます。")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        // 既定の余白（16pt）を外して自分で詰める。上と左をもう少し使うため
+        .contentMarginsDisabled()
     }
 }
 
