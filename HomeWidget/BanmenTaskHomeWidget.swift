@@ -81,26 +81,32 @@ struct HomeProvider: TimelineProvider {
 // MARK: - 見た目（見出しなし、収まる分だけ、上下の中央に置く）
 
 /// 行の寸法。ここだけで決めて、収まる件数の計算と実際の描画の両方で使う。
+///
+/// 文字の大きさは件数で決まる。**満杯なら 15pt、少なければ空いたぶん大きくして埋める**（最大 26pt）。
 private enum Metric {
-    static let font: CGFloat = 15
-    static let lineHeight: CGFloat = 18
-    static let dot: CGFloat = 5              // 行頭の点
-    static let dotSlot: CGFloat = 9          // 点の置き場
-    static let gap: CGFloat = 6              // 点と題名のあいだ
+    static let minFont: CGFloat = 15
+    static let maxFont: CGFloat = 26
+    /// 実際の行の高さは文字の 1.2 倍ほど。計算は少し多めに見て、最後の行がはみ出さないようにする
+    static let lineRatio: CGFloat = 1.25
     static let rowGap: CGFloat = 3           // 行と行のあいだ
+    static let gap: CGFloat = 6              // 点と題名のあいだ
     static let padLeading: CGFloat = 8
     static let padTrailing: CGFloat = 6
     static let padVertical: CGFloat = 4
 
-    static func rowHeight(lines: Int) -> CGFloat {
-        CGFloat(lines) * lineHeight + rowGap
-    }
+    static func lineHeight(_ font: CGFloat) -> CGFloat { (font * lineRatio).rounded() }
+    static func dot(_ font: CGFloat) -> CGFloat { (font * 0.33).rounded() }
+    static func dotSlot(_ font: CGFloat) -> CGFloat { dot(font) + 4 }
+}
+
+private struct Plan {
+    let items: [HomeItem]
+    let font: CGFloat
+    let lineLimit: Int
 }
 
 struct HomeWidgetView: View {
     let entry: HomeEntry
-
-    private var tint: Color { FaceStyle.color(entry.layout.reminderColor) }
 
     var body: some View {
         Group {
@@ -114,7 +120,7 @@ struct HomeWidgetView: View {
                     let plan = plan(for: geo.size)
                     VStack(alignment: .leading, spacing: Metric.rowGap) {
                         ForEach(plan.items) { item in
-                            row(item, lineLimit: plan.lineLimit)
+                            row(item, plan: plan)
                         }
                     }
                     // 余りは上下に均等に配る。上だけ詰まって下が空くのを避ける
@@ -131,43 +137,52 @@ struct HomeWidgetView: View {
 
     // MARK: - 収まる件数を決める
 
-    /// 件数を優先する。1行ずつなら入る件数をまず出し、
-    /// **その件数のまま2行に伸ばしても収まる時だけ** 2行を許す。
+    /// 件数を優先する。いちばん小さい文字で入る件数をまず出し、
+    /// **件数がそれに満たないぶんは文字を大きくして埋める。**
+    /// そのうえで、2行に伸ばしても収まる時だけ2行を許す。
     /// 収まらないなら題名を1行に切って（右端を落として）件数を保つ。
-    private func plan(for size: CGSize) -> (items: [HomeItem], lineLimit: Int) {
-        let textWidth = size.width - Metric.dotSlot - Metric.gap
-        let maxCount = max(1, Int(size.height / Metric.rowHeight(lines: 1)))
+    private func plan(for size: CGSize) -> Plan {
+        let base = Metric.lineHeight(Metric.minFont)
+        let maxCount = max(1, Int((size.height + Metric.rowGap) / (base + Metric.rowGap)))
         let items = Array(entry.items.prefix(maxCount))
+        let count = CGFloat(max(1, items.count))
 
+        // 空いたぶんだけ文字を大きくする
+        let fill = (size.height - (count - 1) * Metric.rowGap) / count
+        let font = min(Metric.maxFont, max(Metric.minFont, fill / Metric.lineRatio))
+
+        let lineHeight = Metric.lineHeight(font)
+        let textWidth = size.width - Metric.dotSlot(font) - Metric.gap
         let needed = items.reduce(CGFloat.zero) { total, item in
-            let lines = estimatedWidth(item.title) <= textWidth ? 1 : 2
-            return total + Metric.rowHeight(lines: lines)
-        }
-        return (items, needed <= size.height ? 2 : 1)
+            let lines: CGFloat = estimatedWidth(item.title, font: font) <= textWidth ? 1 : 2
+            return total + lines * lineHeight
+        } + (count - 1) * Metric.rowGap
+        return Plan(items: items, font: font, lineLimit: needed <= size.height ? 2 : 1)
     }
 
     /// 題名の幅の見当。全角はフォントの大きさ、半角はその半分強で数える。
-    private func estimatedWidth(_ title: String) -> CGFloat {
+    private func estimatedWidth(_ title: String, font: CGFloat) -> CGFloat {
         title.unicodeScalars.reduce(CGFloat.zero) { width, scalar in
-            width + (scalar.value < 0x2E80 ? Metric.font * 0.55 : Metric.font)
+            width + (scalar.value < 0x2E80 ? font * 0.55 : font)
         }
     }
 
     // MARK: - 1行
 
-    private func row(_ item: HomeItem, lineLimit: Int) -> some View {
-        HStack(alignment: .top, spacing: Metric.gap) {
+    private func row(_ item: HomeItem, plan: Plan) -> some View {
+        let dot = Metric.dot(plan.font)
+        return HStack(alignment: .top, spacing: Metric.gap) {
             Circle()
-                .fill(tint)
-                .frame(width: Metric.dot, height: Metric.dot)
-                .frame(width: Metric.dotSlot, alignment: .leading)
+                .fill(Color(white: 0.45))
+                .frame(width: dot, height: dot)
+                .frame(width: Metric.dotSlot(plan.font), alignment: .leading)
                 // 1行目の高さの真ん中に点を置く
-                .padding(.top, (Metric.lineHeight - Metric.dot) / 2)
+                .padding(.top, (Metric.lineHeight(plan.font) - dot) / 2)
 
             Text(item.title)
-                .font(.system(size: Metric.font, weight: .medium))
+                .font(.system(size: plan.font, weight: .medium))
                 .foregroundStyle(.white)
-                .lineLimit(lineLimit)
+                .lineLimit(plan.lineLimit)
                 .truncationMode(.tail)          // 入らない分は右端を落とす
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
