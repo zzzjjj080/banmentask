@@ -8,7 +8,10 @@ import AppIntents
 /// これで純正リマインダーを閉じるたびに文字盤が更新される。
 struct RefreshFaceIntent: AppIntent {
     static var title: LocalizedStringResource = "盤面タスクを更新"
-    static var description = IntentDescription("リマインダーを読み直して Apple Watch の文字盤を更新します")
+    /// **説明文に "Apple" を入れてはいけない。** 入れると Apple 側の処理で
+    /// 「Invalid Siri Support. App Intent description ... cannot contain "apple"」で
+    /// ビルドが弾かれる。アップロードは成功と出るのに、ビルドが現れないので気づきにくい。
+    static var description = IntentDescription("リマインダーを読み直して腕時計の文字盤を更新します")
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult {
