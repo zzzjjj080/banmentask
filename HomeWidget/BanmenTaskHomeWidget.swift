@@ -82,17 +82,17 @@ struct HomeProvider: TimelineProvider {
 
 /// 行の寸法。ここだけで決めて、収まる件数の計算と実際の描画の両方で使う。
 ///
-/// 文字の大きさは件数で決まる。**満杯なら 15pt、少なければ空いたぶん大きくして埋める**（最大 26pt）。
+/// 文字の大きさは件数で決まる。**満杯なら 15pt、少なければ空いたぶん大きくして埋める**（最大 22pt）。
 private enum Metric {
     static let minFont: CGFloat = 15
-    static let maxFont: CGFloat = 26
+    static let maxFont: CGFloat = 22
     /// 実際の行の高さは文字の 1.2 倍ほど。計算は少し多めに見て、最後の行がはみ出さないようにする
     static let lineRatio: CGFloat = 1.25
     static let rowGap: CGFloat = 3           // 行と行のあいだ
     static let gap: CGFloat = 6              // 点と題名のあいだ
     static let padLeading: CGFloat = 8
     static let padTrailing: CGFloat = 6
-    static let padVertical: CGFloat = 4
+    static let padVertical: CGFloat = 7
 
     static func lineHeight(_ font: CGFloat) -> CGFloat { (font * lineRatio).rounded() }
     static func dot(_ font: CGFloat) -> CGFloat { (font * 0.33).rounded() }
