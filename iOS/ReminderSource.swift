@@ -52,6 +52,13 @@ final class ReminderSource: ObservableObject {
         }
         listName = LayoutStore.listName
         layout = LayoutStore.load()
+        #if DEBUG
+        // スクリーンショット用。BT_LAYOUT="2,2" のように「リマインダー数,予定数」を渡す
+        if let spec = ProcessInfo.processInfo.environment["BT_LAYOUT"] {
+            let n = spec.split(separator: ",").compactMap { Int($0) }
+            if n.count == 2 { layout = FaceLayout(reminders: n[0], calendar: n[1]) }
+        }
+        #endif
         // 純正アプリ側の変更（完了・追加・編集・予定の変更）を拾って再読込する
         observer = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged, object: store, queue: .main
@@ -98,7 +105,23 @@ final class ReminderSource: ObservableObject {
             try? store.save(r, commit: false)
         }
         try? store.commit()
+        await seedDemoEvents()
         await reload()
+    }
+
+    /// スクリーンショット用の予定。これから24時間で、終日でないもの
+    private func seedDemoEvents() async {
+        guard EventSource.isAuthorized, EventSource.upcoming24h(store).isEmpty,
+              let calendar = store.defaultCalendarForNewEvents else { return }
+        for (hours, title) in [(2.0, "打ち合わせ"), (5.0, "歯医者")] {
+            let e = EKEvent(eventStore: store)
+            e.title = title
+            e.calendar = calendar
+            e.startDate = Date.now.addingTimeInterval(hours * 3600)
+            e.endDate = e.startDate.addingTimeInterval(3600)
+            try? store.save(e, span: .thisEvent, commit: false)
+        }
+        try? store.commit()
     }
     #endif
 
