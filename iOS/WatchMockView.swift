@@ -1,9 +1,12 @@
 import SwiftUI
 
 /// 「時計ではこう見えます」のプレビュー。
-/// Apple Watch（ステンレスケース＋黒バンド）の中に、インフォグラフ モジュラー風の文字盤を描く。
 /// 中央の横長スロットが盤面タスク。周りの日付・時刻・下段3つは雰囲気用のダミー。
 /// 横長スロットの描画ルールは実際のウィジェットと同じ（2行同じフォント、長い方に合わせて一緒に縮む）。
+///
+/// **腕時計の実物を描かないこと。** バンド・竜頭・側面ボタン・金属ケースは描かない。
+/// 1.0 (2) はアイコンが Apple Watch に似ているとして 5.2.5 で却下された（引き継ぎ書 4-107）。
+/// ここは「画面のプレビュー」に留め、機種が分かる装飾は付けない。
 struct WatchMockView: View {
     let lines: [FaceLine]
     let layout: FaceLayout
@@ -15,57 +18,24 @@ struct WatchMockView: View {
 
     var body: some View {
         ZStack {
-            band
-            watchCase
-            crownAndButton
+            bezel
             screen
         }
-        .frame(width: caseW + 40, height: caseH + 60)
+        .frame(width: caseW, height: caseH)
     }
 
-    // MARK: - 筐体
+    // MARK: - 枠
 
-    private var band: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(LinearGradient(colors: [Color(white: 0.16), Color(white: 0.08), Color(white: 0.14)],
-                                 startPoint: .leading, endPoint: .trailing))
-            .frame(width: 128, height: caseH + 60)
-    }
-
-    private var watchCase: some View {
-        RoundedRectangle(cornerRadius: 54, style: .continuous)
-            .fill(LinearGradient(colors: [Color(white: 0.82), Color(white: 0.55), Color(white: 0.30)],
-                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+    /// 画面のまわりの黒い縁だけ。機種の分かる形にはしない
+    private var bezel: some View {
+        RoundedRectangle(cornerRadius: 46, style: .continuous)
+            .fill(Color(white: 0.14))
             .overlay(
-                RoundedRectangle(cornerRadius: 54, style: .continuous)
-                    .strokeBorder(LinearGradient(colors: [.white.opacity(0.9), .white.opacity(0.1)],
-                                                 startPoint: .topLeading, endPoint: .bottomTrailing),
-                                  lineWidth: 1.5)
-            )
-            .overlay(
-                // ベゼルとガラスの境目
                 RoundedRectangle(cornerRadius: 46, style: .continuous)
-                    .strokeBorder(Color.black.opacity(0.55), lineWidth: 5)
-                    .padding(7)
+                    .strokeBorder(Color(white: 0.28), lineWidth: 1)
             )
             .frame(width: caseW, height: caseH)
-            .shadow(color: .black.opacity(0.6), radius: 14, y: 8)
-    }
-
-    private var crownAndButton: some View {
-        ZStack {
-            Capsule()
-                .fill(LinearGradient(colors: [Color(white: 0.85), Color(white: 0.45)],
-                                     startPoint: .leading, endPoint: .trailing))
-                .frame(width: 12, height: 44)
-                .overlay(Rectangle().fill(.red.opacity(0.85)).frame(width: 2).offset(x: 3))
-                .offset(x: caseW / 2 + 4, y: -56)
-            Capsule()
-                .fill(LinearGradient(colors: [Color(white: 0.8), Color(white: 0.4)],
-                                     startPoint: .leading, endPoint: .trailing))
-                .frame(width: 8, height: 58)
-                .offset(x: caseW / 2 + 2, y: 18)
-        }
+            .shadow(color: .black.opacity(0.6), radius: 12, y: 6)
     }
 
     // MARK: - 画面
