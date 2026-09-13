@@ -33,6 +33,21 @@ struct ContentView: View {
     private let dim = Color(white: 0.55)
 
     var body: some View {
+        ScrollViewReader { proxy in
+            content
+                .task {
+                    #if DEBUG
+                    // スクリーンショット用。BT_SCROLL=bottom で一番下（接続・投げ銭）まで送る
+                    if ProcessInfo.processInfo.environment["BT_SCROLL"] == "bottom" {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
+                    #endif
+                }
+        }
+    }
+
+    private var content: some View {
         List {
             // ── リスト切替 ────────────────────────────────────
             Section {
@@ -90,6 +105,7 @@ struct ContentView: View {
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 32, trailing: 16))
+                    .id("bottom")
             }
         }
         .listStyle(.plain)
@@ -522,11 +538,25 @@ struct ContentView: View {
 
     // MARK: - 接続の状態（iPhone → Watch → 文字盤 の経路として見せる）
 
+    /// スクリーンショット用。BT_CONNECTED=1 で「Watch に届いて文字盤にも置いてある」状態を見せる。
+    /// シミュレータでは Watch アプリの有無や文字盤の配置が取れず、いつも警告が出てしまうため。
+    private var demoConnected: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["BT_CONNECTED"] == "1"
+        #else
+        false
+        #endif
+    }
+
     private var statusGrid: some View {
-        let watchOK = session.isPaired && session.isWatchAppInstalled
-        let faceOK = watchOK && session.isComplicationEnabled
+        let paired = demoConnected || session.isPaired
+        let installed = demoConnected || session.isWatchAppInstalled
+        let onFace = demoConnected || session.isComplicationEnabled
+        let transfers = demoConnected ? 48 : session.remainingTransfers
+        let watchOK = paired && installed
+        let faceOK = watchOK && onFace
         let budget = 50.0
-        let remaining = Double(session.remainingTransfers)
+        let remaining = Double(transfers)
         return VStack(spacing: 18) {
             Text("接続")
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -538,11 +568,11 @@ struct ContentView: View {
                 HStack(spacing: 0) {
                     node("iphone", label: "iPhone", ok: true)
                     link(ok: watchOK)
-                    node("applewatch", label: session.isPaired ? "Watch" : "未ペアリング", ok: watchOK)
+                    node("applewatch", label: paired ? "Watch" : "未ペアリング", ok: watchOK)
                     link(ok: faceOK)
                     node("rectangle.inset.filled", label: faceOK ? "文字盤" : "未配置", ok: faceOK)
                 }
-                Text(connectionSummary(watchOK: watchOK, faceOK: faceOK))
+                Text(connectionSummary(paired: paired, installed: installed, onFace: onFace))
                     .font(.system(size: 13))
                     .foregroundStyle(faceOK ? Color.green : Color.orange)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -555,7 +585,7 @@ struct ContentView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(dim)
                     Spacer()
-                    Text("\(session.remainingTransfers)")
+                    Text("\(transfers)")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     + Text(" / 50")
@@ -577,7 +607,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Text(session.lastResult)
+            Text(demoConnected ? "21:46 画面: 送信済み（文字盤を即時更新）" : session.lastResult)
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(dim)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -589,10 +619,10 @@ struct ContentView: View {
     }
 
     /// いまの接続状態を1行で言う。線が途切れている場所ごとに、何をすればいいかを添える。
-    private func connectionSummary(watchOK: Bool, faceOK: Bool) -> String {
-        if !session.isPaired { return "Apple Watch とペアリングされていません" }
-        if !session.isWatchAppInstalled { return "Watch に盤面タスクが入っていません。iPhone の Watch アプリからインストール" }
-        if !session.isComplicationEnabled { return "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク" }
+    private func connectionSummary(paired: Bool, installed: Bool, onFace: Bool) -> String {
+        if !paired { return "Apple Watch とペアリングされていません" }
+        if !installed { return "Watch に盤面タスクが入っていません。iPhone の Watch アプリからインストール" }
+        if !onFace { return "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク" }
         return "接続OK。変更は数秒で文字盤に反映されます"
     }
 
