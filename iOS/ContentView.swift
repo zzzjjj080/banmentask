@@ -307,7 +307,7 @@ struct ContentView: View {
                            height: WatchMockView.size.height * Self.mockScale, alignment: .top)
             }
             VStack(alignment: .leading, spacing: 12) {
-                Text("時計に出すもの")
+                Text("表示設定")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(dim)
                 slotCard(.reminder)
@@ -327,6 +327,12 @@ struct ContentView: View {
             DropLine()
                 .stroke(Color(white: 0.4), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
                 .frame(width: 2, height: 18)
+            // ボタンを押さなくても、一覧・予定・表示設定が変わるたびに送っている（onChange → send）
+            Text("変更は自動で反映されます")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(dim)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             // 一覧の行（○＋題名）を小さくしたもの。文字盤に入る行の数と色がそのまま並ぶ
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(FaceComposer.exampleLines(source.layout).enumerated()), id: \.offset) { i, line in
@@ -500,7 +506,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - 時計に反映（手動送信・60秒クールダウン）
+    // MARK: - 今すぐ反映（手動送信・60秒クールダウン。ふだんは自動で送っている）
 
     private var sendButton: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -514,7 +520,7 @@ struct ContentView: View {
                 HStack(spacing: 5) {
                     Image(systemName: waiting ? "hourglass" : "arrow.down")
                         .font(.system(size: 12, weight: .bold))
-                    Text(waiting ? "あと \(left) 秒" : "時計に反映")
+                    Text(waiting ? "あと \(left) 秒" : "今すぐ反映")
                         .font(.system(size: 13, weight: .semibold))
                         .monospacedDigit()
                 }
