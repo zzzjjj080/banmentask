@@ -300,7 +300,6 @@ struct ContentView: View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(spacing: 0) {
                 feed
-                    .zIndex(1)
                 WatchMockView(lines: FaceComposer.exampleLines(source.layout), layout: source.layout)
                     .scaleEffect(Self.mockScale, anchor: .top)
                     .frame(width: WatchMockView.size.width * Self.mockScale,
@@ -320,34 +319,24 @@ struct ContentView: View {
         }
     }
 
-    /// 上の一覧から時計へ流れ込む絵。
-    /// 点線 → 文字盤に入る行の数だけの短い棒（色もそのまま）→ 時計の上縁に差し込んだ「時計に反映」
+    /// 上の一覧から時計への流れ：流れる矢印 → 今すぐ反映 → 「変更は自動で反映されます」→ 時計
     private var feed: some View {
-        VStack(spacing: 6) {
-            DropLine()
-                .stroke(Color(white: 0.4), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
-                .frame(width: 2, height: 18)
-            // ボタンを押さなくても、一覧・予定・表示設定が変わるたびに送っている（onChange → send）
+        VStack(spacing: 0) {
+            FlowDown()
+            sendButton
+                .padding(.top, 6)
             Text("変更は自動で反映されます")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(dim)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            // 一覧の行（○＋題名）を小さくしたもの。文字盤に入る行の数と色がそのまま並ぶ
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(FaceComposer.exampleLines(source.layout).enumerated()), id: \.offset) { i, line in
-                    let color = FaceStyle.color(line.kind, layout: source.layout)
-                    HStack(spacing: 4) {
-                        Circle().strokeBorder(color, lineWidth: 1.3).frame(width: 7, height: 7)
-                        Capsule().fill(color).frame(width: 28 - CGFloat(i) * 4, height: 3)
-                    }
-                }
-            }
-            .frame(width: 40, alignment: .leading)
-            sendButton
-                .padding(.top, 2)
-                .padding(.bottom, -10)   // 時計の上縁に差し込む
+                .minimumScaleFactor(0.75)
+                .padding(.top, 7)
+            // 説明から時計の上縁へつなぐ短い線
+            LinearGradient(colors: [Color(white: 0.4), Color(white: 0.2)], startPoint: .top, endPoint: .bottom)
+                .frame(width: 2, height: 12)
+                .padding(.top, 4)
         }
+        .frame(width: WatchMockView.size.width * Self.mockScale)
     }
 
     // MARK: - タスク行（タップでその場編集、○は5秒の猶予つき完了）
@@ -517,21 +506,16 @@ struct ContentView: View {
                 cooldownUntil = Date.now.addingTimeInterval(cooldown)
                 send(force: true, reason: "手動")
             } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: waiting ? "hourglass" : "arrow.down")
-                        .font(.system(size: 12, weight: .bold))
+                HStack(spacing: 6) {
+                    Image(systemName: waiting ? "hourglass" : "arrow.triangle.2.circlepath")
+                        .font(.system(size: 13, weight: .bold))
                     Text(waiting ? "あと \(left) 秒" : "今すぐ反映")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .bold))
                         .monospacedDigit()
                 }
                 .foregroundStyle(waiting ? dim : Color.black)
-                .padding(.horizontal, 14)
-                .frame(height: 32)
-                .background(waiting ? Color(white: 0.2) : Color.white, in: Capsule())
-                // 背景色の縁取りで、時計の枠を切り欠いて差し込んだように見せる
-                .overlay(Capsule().strokeBorder(bg, lineWidth: 3))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(KeycapButtonStyle(enabled: !waiting))
             .disabled(waiting)
         }
     }
@@ -658,12 +642,52 @@ struct ContentView: View {
     }
 }
 
-/// 上から下へ1本の線（点線にして使う）
-private struct DropLine: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
-        return p
+/// 上から下へ流れる矢印。明るい所が上から下へ移っていく（「視差効果を減らす」なら止める）
+private struct FlowDown: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.clear, Color(white: 0.4)], startPoint: .top, endPoint: .bottom)
+                    .frame(width: 2, height: 16)
+                VStack(spacing: 1) {
+                    ForEach(0..<3, id: \.self) { i in
+                        let wave = reduceMotion ? 0.6 : 0.5 + 0.5 * sin(2 * Double.pi * (t * 0.9 - Double(i) * 0.28))
+                        Image(systemName: "chevron.compact.down")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.18 + 0.62 * wave))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// 押せると分かるキーの形。下に厚みがあり、押すと沈む
+private struct KeycapButtonStyle: ButtonStyle {
+    var enabled: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed && enabled
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        return configuration.label
+            .frame(maxWidth: .infinity)
+            .frame(height: 40)
+            .background(
+                shape.fill(enabled
+                           ? LinearGradient(colors: [Color.white, Color(white: 0.84)], startPoint: .top, endPoint: .bottom)
+                           : LinearGradient(colors: [Color(white: 0.22), Color(white: 0.18)], startPoint: .top, endPoint: .bottom))
+            )
+            .overlay(shape.strokeBorder(Color.white.opacity(enabled ? 0.9 : 0.08), lineWidth: 1))
+            .offset(y: pressed ? 4 : 0)
+            .background(
+                // 厚みの部分
+                shape.fill(enabled ? Color(white: 0.45) : Color(white: 0.12))
+                    .offset(y: 4)
+            )
+            .padding(.bottom, 4)
+            .animation(.easeOut(duration: 0.08), value: pressed)
     }
 }
