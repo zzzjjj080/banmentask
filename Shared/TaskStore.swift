@@ -3,7 +3,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b41"
+    static let marker = "b42"
 }
 
 enum AppGroup {
@@ -163,7 +163,10 @@ enum LayoutStore {
     private static let listKey = "listName"
     private static var defaults: UserDefaults? { UserDefaults(suiteName: AppGroup.identifier) }
 
-    /// b38 までの保存データは clamped のせいで色がいつも赤(2)。既定を白にしたので1回だけ読み替える
+    /// b38 までの保存データは clamped のせいで色がいつも赤(2)。既定を白にしたので1回だけ読み替える。
+    /// 印は **b39 以降が保存するたびに付ける**。印の無い保存データ＝b38 までのもの、だけを読み替える。
+    /// （読み込み時にだけ印を付けていた b39〜b41 では、新規インストールで保存データが無いと印が付かず、
+    ///   あとで選んだ赤が次の起動で白に戻されていた）
     private static let whiteDefaultKey = "reminderColorWhiteDefault"
 
     static func load() -> FaceLayout {
@@ -171,13 +174,13 @@ enum LayoutStore {
               var l = try? JSONDecoder().decode(FaceLayout.self, from: data) else { return .default }
         if defaults?.bool(forKey: whiteDefaultKey) != true {
             if l.reminderColor == 2 { l.reminderColor = 0 }
-            defaults?.set(true, forKey: whiteDefaultKey)
             save(l)
         }
         return l.clamped
     }
     static func save(_ l: FaceLayout) {
         defaults?.set(try? JSONEncoder().encode(l.clamped), forKey: key)
+        defaults?.set(true, forKey: whiteDefaultKey)
     }
     static var listName: String {
         get { defaults?.string(forKey: listKey) ?? "基本" }
