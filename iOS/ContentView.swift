@@ -319,13 +319,13 @@ struct ContentView: View {
         }
     }
 
-    /// 上の一覧から時計への流れ：流れる矢印 → 今すぐ反映 → 「変更は自動で反映されます」→ 時計
+    /// 上の一覧から時計への流れ：流れる矢印 → 今すぐ反映 → 「押すのは急ぐ時だけでOK」→ 時計
     private var feed: some View {
         VStack(spacing: 0) {
             FlowDown()
             sendButton
                 .padding(.top, 6)
-            Text("変更は自動で反映されます")
+            Text("押すのは急ぐ時だけでOK")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(dim)
                 .lineLimit(1)
