@@ -1,60 +1,61 @@
 // アプリアイコンを描く。1024x1024 の PNG を作る。
 //   swift tools/make-icon.swift <出力先.png>
 //
-// **Apple の製品に似た絵を描かないこと。**
-// 1.0 (2) は「アイコンが Apple Watch に似ている」で 5.2.5 却下された（引き継ぎ書 4-107）。
-// 時計・バンド・竜頭・側面ボタンは描かない。リストそのものを記号にする。
-//
-// watchOS 側は円に切り抜かれるので、中身は中心から半径 410 の円に収める。
+// 1.1 の図柄：文字盤（曜日・日付・時刻・横長スロットに2行）を、角丸の縁で囲んだもの。
+// **竜頭・側面ボタン・バンドは描かない。**
+// 1.0 (2) は「アイコンが Apple Watch に似ている」で 5.2.5 却下された（引き継ぎ書 4-115）。
+// この図柄はそこから竜頭とバンドを外しただけの「ギリギリ」を本人判断で攻めている。
+// 却下されたら store/icon-candidates/ の控え（06 丸い腕時計 / 03 目盛り＋リスト）に替える。
 import AppKit
-import ImageIO
-import UniformTypeIdentifiers
 
-let side = 1024
 let out = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "icon.png"
-
-let space = CGColorSpaceCreateDeviceRGB()
-guard let ctx = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
-                          bytesPerRow: 0, space: space,
-                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { exit(1) }
-
-/// 上からの y を CoreGraphics の y に直す
-func flip(_ y: CGFloat) -> CGFloat { CGFloat(side) - y }
-
-// 背景（上がわずかに明るい炭色）
-let bg = CGGradient(colorsSpace: space, colors: [
-    CGColor(red: 0.13, green: 0.13, blue: 0.14, alpha: 1),
-    CGColor(red: 0.02, green: 0.02, blue: 0.02, alpha: 1),
-] as CFArray, locations: [0, 1])!
-ctx.drawLinearGradient(bg, start: CGPoint(x: 0, y: CGFloat(side)), end: CGPoint(x: 0, y: 0), options: [])
-
+let S: CGFloat = 1024
+func gray(_ g: CGFloat) -> CGColor { CGColor(gray: g, alpha: 1) }
 let red = CGColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1)
-let grey = CGColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1)
 
-/// ○ と棒を1行ぶん描く
-func row(y: CGFloat, barWidth: CGFloat, color: CGColor) {
-    let ringCenter = CGPoint(x: 262, y: flip(y))
-    let ringRadius: CGFloat = 38
-    ctx.setStrokeColor(color)
-    ctx.setLineWidth(13)
-    ctx.strokeEllipse(in: CGRect(x: ringCenter.x - ringRadius, y: ringCenter.y - ringRadius,
-                                 width: ringRadius * 2, height: ringRadius * 2))
+let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1024, pixelsHigh: 1024, bitsPerSample: 8,
+                           samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                           colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+let cg = NSGraphicsContext(bitmapImageRep: rep)!.cgContext
+NSGraphicsContext.saveGraphicsState()
+cg.translateBy(x: 0, y: S); cg.scaleBy(x: 1, y: -1)                 // 上が y=0
+NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: true)
 
-    let barHeight: CGFloat = 66
-    let bar = CGRect(x: 360, y: flip(y) - barHeight / 2, width: barWidth, height: barHeight)
-    ctx.setFillColor(color)
-    ctx.addPath(CGPath(roundedRect: bar, cornerWidth: barHeight / 2, cornerHeight: barHeight / 2, transform: nil))
-    ctx.fillPath()
+func rrect(_ r: CGRect, _ radius: CGFloat, fill: CGColor? = nil, stroke: CGColor? = nil, lw: CGFloat = 0) {
+    let p = CGPath(roundedRect: r, cornerWidth: radius, cornerHeight: radius, transform: nil)
+    if let f = fill { cg.setFillColor(f); cg.addPath(p); cg.fillPath() }
+    if let s = stroke { cg.setStrokeColor(s); cg.setLineWidth(lw); cg.addPath(p); cg.strokePath() }
+}
+func font(_ size: CGFloat, _ w: NSFont.Weight, rounded: Bool = false) -> NSFont {
+    let f = NSFont.systemFont(ofSize: size, weight: w)
+    if rounded, let d = f.fontDescriptor.withDesign(.rounded) { return NSFont(descriptor: d, size: size) ?? f }
+    return f
+}
+func text(_ s: String, _ f: NSFont, _ color: CGColor, left: CGPoint? = nil, right: CGPoint? = nil) {
+    let str = NSAttributedString(string: s, attributes: [.font: f, .foregroundColor: NSColor(cgColor: color)!])
+    let b = str.size()
+    let p = left.map { CGPoint(x: $0.x, y: $0.y - b.height / 2) } ?? CGPoint(x: right!.x - b.width, y: right!.y - b.height / 2)
+    str.draw(at: p)
 }
 
-// 上2件が文字盤に出るもの（赤）、3件目はまだ出ないもの（灰）
-row(y: 330, barWidth: 430, color: red)
-row(y: 512, barWidth: 366, color: red)
-row(y: 694, barWidth: 300, color: grey)
+// 背景（上がわずかに明るい炭色）
+let bg = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [gray(0.15), gray(0.02)] as CFArray, locations: [0, 1])!
+cg.drawLinearGradient(bg, start: .zero, end: CGPoint(x: 0, y: S), options: [])
 
-guard let image = ctx.makeImage(),
-      let dest = CGImageDestinationCreateWithURL(URL(fileURLWithPath: out) as CFURL,
-                                                 UTType.png.identifier as CFString, 1, nil) else { exit(1) }
-CGImageDestinationAddImage(dest, image, nil)
-CGImageDestinationFinalize(dest)
+// 画面と縁。watchOS は円に切り抜かれるので、角が半径 512 の円に収まる大きさにしてある
+rrect(CGRect(x: 162, y: 112, width: 700, height: 800), 170, fill: gray(0), stroke: gray(0.28), lw: 26)
+
+// 上下の余白をそろえる（画面の内側 125〜899 に対して、上下ともおよそ 120）
+let L: CGFloat = 238, R: CGFloat = 786
+text("SUN", font(58, .semibold), red, left: CGPoint(x: L, y: 276))
+text("13", font(96, .semibold, rounded: true), gray(1), left: CGPoint(x: L, y: 346))
+text("10:09", font(132, .medium, rounded: true), gray(1), right: CGPoint(x: R, y: 312))   // 日付とくっつかない大きさ
+
+let slot = CGRect(x: L, y: 460, width: R - L, height: 320)
+rrect(slot, 54, fill: gray(0.16))
+text("洗濯する", font(104, .bold), red, left: CGPoint(x: L + 42, y: 560))
+text("電話する", font(104, .bold), red, left: CGPoint(x: L + 42, y: 690))
+
+NSGraphicsContext.restoreGraphicsState()
+try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: out))
 print("wrote \(out)")
