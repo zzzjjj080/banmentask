@@ -77,7 +77,8 @@ struct ContentView: View {
                 statusGrid
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 6, trailing: 16))
+                    // 時計まわりより重要度が低いので、間を空けて下げる
+                    .listRowInsets(EdgeInsets(top: 48, leading: 16, bottom: 6, trailing: 16))
                 CoffeeTipSection(tipJar: tipJar)
                     .listRowBackground(bg)
                     .listRowSeparator(.hidden)
@@ -151,26 +152,18 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - 表示数（リマインダー・予定をそれぞれ ＋− で）
+    // MARK: - 件数と色（時計の右のカード）
 
     @State private var showLimitAlert = false
+    @State private var colorPickerFor: FaceItem.Kind?
 
-    /// 1行で「● リマインダー −2+ ・ ● 予定 −1+」。チップを押すと色が順ぐり
-    private var layoutPicker: some View {
-        HStack(spacing: 0) {
-            stepper("リマインダー", colorIndex: source.layout.reminderColor, value: source.layout.reminderSlots,
-                    cycleColor: { var l = source.layout; l.reminderColor = FaceStyle.next(l.reminderColor); source.layout = l }) { delta in
-                change(reminders: source.layout.reminderSlots + delta, calendar: source.layout.calendarSlots)
-            }
-            Spacer(minLength: 8)
-            stepper("予定", colorIndex: source.layout.eventColor, value: source.layout.calendarSlots,
-                    cycleColor: { var l = source.layout; l.eventColor = FaceStyle.next(l.eventColor); source.layout = l }) { delta in
-                change(reminders: source.layout.reminderSlots, calendar: source.layout.calendarSlots + delta)
-            }
-        }
-        .alert("文字盤には合計 \(FaceLayout.maxLines) 件までです", isPresented: $showLimitAlert) {
-            Button("OK", role: .cancel) {}
-        }
+    private func slots(_ kind: FaceItem.Kind) -> Int {
+        kind == .reminder ? source.layout.reminderSlots : source.layout.calendarSlots
+    }
+
+    private func step(_ kind: FaceItem.Kind, _ delta: Int) {
+        change(reminders: source.layout.reminderSlots + (kind == .reminder ? delta : 0),
+               calendar: source.layout.calendarSlots + (kind == .event ? delta : 0))
     }
 
     private func change(reminders: Int, calendar: Int) {
@@ -185,65 +178,170 @@ struct ContentView: View {
                                    reminderColor: source.layout.reminderColor, eventColor: source.layout.eventColor)
     }
 
-    private func stepper(_ label: String, colorIndex: Int, value: Int,
-                         cycleColor: @escaping () -> Void, step: @escaping (Int) -> Void) -> some View {
-        HStack(spacing: 6) {
-            // 色チップ。タップするたびに15色を順ぐり
-            Button {
-                Haptic.select()
-                cycleColor()
-            } label: {
-                ZStack {
-                    Circle().fill(FaceStyle.color(colorIndex))
-                    Circle().strokeBorder(Color.white.opacity(0.35), lineWidth: 1)
-                }
-                .frame(width: 18, height: 18)
+    /// 上段「リマインダー　● 白 ▾」、下段「−　2　＋」。色は押すと15色の一覧が開く
+    private func slotCard(_ kind: FaceItem.Kind) -> some View {
+        let value = slots(kind)
+        let total = source.layout.lines
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
+                Text(kind == .reminder ? "リマインダー" : "予定")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 4)
+                colorChip(kind)
             }
-            .buttonStyle(.plain)
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(dim)
-                .lineLimit(1)
             HStack(spacing: 0) {
-                Button { step(-1) } label: {
-                    Image(systemName: "minus")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 30, height: 28)
-                }
+                stepButton("minus", enabled: value > 0 && total > 1) { step(kind, -1) }
                 Text("\(value)")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .frame(width: 22)
-                Button { step(+1) } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 30, height: 28)
-                }
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                stepButton("plus", enabled: total < FaceLayout.maxLines) { step(kind, +1) }
+            }
+            .frame(height: 42)
+            .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .padding(10)
+        .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(edge, lineWidth: 1))
+    }
+
+    private func stepButton(_ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 16, weight: .bold))
+                .frame(width: 46, height: 42)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(enabled ? Color.white : Color(white: 0.35))
+    }
+
+    /// 今の色を「● 白 ▾」と名前つきで見せる。押すと色の一覧
+    private func colorChip(_ kind: FaceItem.Kind) -> some View {
+        let index = source.layout.color(kind)
+        return Button {
+            Haptic.select()
+            colorPickerFor = kind
+        } label: {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(FaceStyle.color(index))
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.35), lineWidth: 1))
+                    .frame(width: 14, height: 14)
+                Text(FaceStyle.name(index))
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
             }
             .foregroundStyle(.white)
-            .buttonStyle(.plain)
-            .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .padding(.horizontal, 8)
+            .frame(height: 28)
+            .background(Color(white: 0.17), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: Binding(get: { colorPickerFor == kind },
+                                      set: { if !$0 { colorPickerFor = nil } })) {
+            colorGrid(kind)
+                .presentationCompactAdaptation(.popover)
         }
     }
 
-    // MARK: - 文字盤プレビュー（一番下）
+    private func colorGrid(_ kind: FaceItem.Kind) -> some View {
+        let current = source.layout.color(kind)
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(kind == .reminder ? "リマインダーの色" : "予定の色")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(dim)
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(48), spacing: 6), count: 5), spacing: 10) {
+                ForEach(FaceStyle.palette.indices, id: \.self) { i in
+                    Button { pick(i, for: kind) } label: {
+                        VStack(spacing: 4) {
+                            Circle()
+                                .fill(FaceStyle.color(i))
+                                .overlay(Circle().strokeBorder(i == current ? Color.white : Color.white.opacity(0.2),
+                                                               lineWidth: i == current ? 2.5 : 1))
+                                .frame(width: 30, height: 30)
+                            Text(FaceStyle.name(i))
+                                .font(.system(size: 10, weight: i == current ? .semibold : .regular))
+                                .foregroundStyle(i == current ? Color.white : dim)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .frame(width: 48)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(16)
+        .preferredColorScheme(.dark)
+    }
+
+    private func pick(_ index: Int, for kind: FaceItem.Kind) {
+        Haptic.select()
+        var l = source.layout
+        if kind == .reminder { l.reminderColor = index } else { l.eventColor = index }
+        source.layout = l
+        colorPickerFor = nil
+    }
+
+    // MARK: - 文字盤プレビュー（左）と件数・色（右）
+
+    private static let mockScale: CGFloat = 0.74
 
     private var watchMock: some View {
-        VStack(spacing: 0) {
-            sendButton
-            // ボタンから時計へ流れる矢印。「これに反映する」を絵で見せる
-            VStack(spacing: 2) {
-                Rectangle().fill(edge).frame(width: 1.5, height: 14)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(edge)
+        HStack(alignment: .bottom, spacing: 12) {
+            VStack(spacing: 0) {
+                feed
+                    .zIndex(1)
+                WatchMockView(lines: FaceComposer.exampleLines(source.layout), layout: source.layout)
+                    .scaleEffect(Self.mockScale, anchor: .top)
+                    .frame(width: WatchMockView.size.width * Self.mockScale,
+                           height: WatchMockView.size.height * Self.mockScale, alignment: .top)
             }
-            .padding(.top, 4)
-            WatchMockView(lines: FaceComposer.exampleLines(source.layout), layout: source.layout)
-                .padding(.top, -6)
-            layoutPicker
-                .padding(.top, 4)
+            VStack(alignment: .leading, spacing: 12) {
+                Text("時計に出すもの")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(dim)
+                slotCard(.reminder)
+                slotCard(.event)
+            }
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
+        .alert("文字盤には合計 \(FaceLayout.maxLines) 件までです", isPresented: $showLimitAlert) {
+            Button("OK", role: .cancel) {}
+        }
+    }
+
+    /// 上の一覧から時計へ流れ込む絵。
+    /// 点線 → 文字盤に入る行の数だけの短い棒（色もそのまま）→ 時計の上縁に差し込んだ「時計に反映」
+    private var feed: some View {
+        VStack(spacing: 6) {
+            DropLine()
+                .stroke(Color(white: 0.4), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+                .frame(width: 2, height: 18)
+            // 一覧の行（○＋題名）を小さくしたもの。文字盤に入る行の数と色がそのまま並ぶ
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(Array(FaceComposer.exampleLines(source.layout).enumerated()), id: \.offset) { i, line in
+                    let color = FaceStyle.color(line.kind, layout: source.layout)
+                    HStack(spacing: 4) {
+                        Circle().strokeBorder(color, lineWidth: 1.3).frame(width: 7, height: 7)
+                        Capsule().fill(color).frame(width: 28 - CGFloat(i) * 4, height: 3)
+                    }
+                }
+            }
+            .frame(width: 40, alignment: .leading)
+            sendButton
+                .padding(.top, 2)
+                .padding(.bottom, -10)   // 時計の上縁に差し込む
+        }
     }
 
     // MARK: - タスク行（タップでその場編集、○は5秒の猶予つき完了）
@@ -413,17 +511,19 @@ struct ContentView: View {
                 cooldownUntil = Date.now.addingTimeInterval(cooldown)
                 send(force: true, reason: "手動")
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: waiting ? "hourglass" : "arrow.down.to.line")
-                        .font(.system(size: 12, weight: .semibold))
+                HStack(spacing: 5) {
+                    Image(systemName: waiting ? "hourglass" : "arrow.down")
+                        .font(.system(size: 12, weight: .bold))
                     Text(waiting ? "あと \(left) 秒" : "時計に反映")
                         .font(.system(size: 13, weight: .semibold))
+                        .monospacedDigit()
                 }
-                .foregroundStyle(waiting ? dim : .white)
+                .foregroundStyle(waiting ? dim : Color.black)
                 .padding(.horizontal, 14)
-                .frame(height: 34)
-                .background(Color(white: 0.14), in: Capsule())
-                .overlay(Capsule().strokeBorder(edge, lineWidth: 1))
+                .frame(height: 32)
+                .background(waiting ? Color(white: 0.2) : Color.white, in: Capsule())
+                // 背景色の縁取りで、時計の枠を切り欠いて差し込んだように見せる
+                .overlay(Capsule().strokeBorder(bg, lineWidth: 3))
             }
             .buttonStyle(.plain)
             .disabled(waiting)
@@ -549,5 +649,15 @@ struct ContentView: View {
     private func send(force: Bool, reason: String) {
         let tasks = source.facePayload
         Task { await session.sendIfChanged(tasks, force: force, reason: reason) }
+    }
+}
+
+/// 上から下へ1本の線（点線にして使う）
+private struct DropLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        return p
     }
 }

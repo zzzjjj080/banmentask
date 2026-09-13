@@ -3,7 +3,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b38"
+    static let marker = "b39"
 }
 
 enum AppGroup {
@@ -24,13 +24,14 @@ struct FaceLayout: Codable, Equatable {
 
     static let `default` = FaceLayout(lines: 2, calendarSlots: 0)
 
-    init(lines: Int, calendarSlots: Int, reminderColor: Int = 2, eventColor: Int = 9) {
+    /// リマインダーの既定色は白（0）。予定は青（9）
+    init(lines: Int, calendarSlots: Int, reminderColor: Int = 0, eventColor: Int = 9) {
         self.lines = lines
         self.calendarSlots = calendarSlots
         self.reminderColor = reminderColor
         self.eventColor = eventColor
     }
-    init(reminders: Int, calendar: Int, reminderColor: Int = 2, eventColor: Int = 9) {
+    init(reminders: Int, calendar: Int, reminderColor: Int = 0, eventColor: Int = 9) {
         self.init(lines: reminders + calendar, calendarSlots: calendar,
                   reminderColor: reminderColor, eventColor: eventColor)
     }
@@ -40,7 +41,7 @@ struct FaceLayout: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         lines = try c.decode(Int.self, forKey: .lines)
         calendarSlots = try c.decode(Int.self, forKey: .calendarSlots)
-        reminderColor = try c.decodeIfPresent(Int.self, forKey: .reminderColor) ?? 2
+        reminderColor = try c.decodeIfPresent(Int.self, forKey: .reminderColor) ?? 0
         eventColor = try c.decodeIfPresent(Int.self, forKey: .eventColor) ?? 9
     }
 
@@ -50,10 +51,12 @@ struct FaceLayout: Codable, Equatable {
     var usesCalendar: Bool { calendarSlots > 0 }
     var usesReminders: Bool { reminderSlots > 0 }
 
-    /// 範囲に収める（合計1〜maxLines）
+    /// 範囲に収める（合計1〜maxLines）。**色はそのまま残す。**
+    /// b38 までは色を渡し忘れていて、選んだ色が保存も送信もされず、いつも既定色に戻っていた。
     var clamped: FaceLayout {
         let l = min(max(lines, 1), Self.maxLines)
-        return FaceLayout(lines: l, calendarSlots: min(max(calendarSlots, 0), l))
+        return FaceLayout(lines: l, calendarSlots: min(max(calendarSlots, 0), l),
+                          reminderColor: reminderColor, eventColor: eventColor)
     }
 }
 
@@ -160,9 +163,17 @@ enum LayoutStore {
     private static let listKey = "listName"
     private static var defaults: UserDefaults? { UserDefaults(suiteName: AppGroup.identifier) }
 
+    /// b38 までの保存データは clamped のせいで色がいつも赤(2)。既定を白にしたので1回だけ読み替える
+    private static let whiteDefaultKey = "reminderColorWhiteDefault"
+
     static func load() -> FaceLayout {
         guard let data = defaults?.data(forKey: key),
-              let l = try? JSONDecoder().decode(FaceLayout.self, from: data) else { return .default }
+              var l = try? JSONDecoder().decode(FaceLayout.self, from: data) else { return .default }
+        if defaults?.bool(forKey: whiteDefaultKey) != true {
+            if l.reminderColor == 2 { l.reminderColor = 0 }
+            defaults?.set(true, forKey: whiteDefaultKey)
+            save(l)
+        }
         return l.clamped
     }
     static func save(_ l: FaceLayout) {

@@ -11,8 +11,11 @@ struct WatchMockView: View {
     let lines: [FaceLine]
     let layout: FaceLayout
 
-    private let caseW: CGFloat = 232
-    private let caseH: CGFloat = 282
+    /// 枠の外寸。一覧画面で縮めて置くときに使う
+    static let size = CGSize(width: 232, height: 282)
+
+    private let caseW: CGFloat = WatchMockView.size.width
+    private let caseH: CGFloat = WatchMockView.size.height
     private let screenW: CGFloat = 206
     private let screenH: CGFloat = 256
 
