@@ -3,7 +3,7 @@ import Foundation
 /// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
 /// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b44"
+    static let marker = "b45"
 }
 
 enum AppGroup {
@@ -73,13 +73,29 @@ struct FaceItem: Codable, Equatable, Identifiable {
     let kind: Kind
     let title: String
     let start: Date?        // 予定のみ
+    /// 終日の予定。古い送信データには無いので Optional（無ければ時刻のある予定）
+    var allDay: Bool? = nil
+    /// 終日の予定が終わる時刻（翌日 0:00 など）。文字盤から外す時刻に使う
+    var end: Date? = nil
 
-    /// 文字盤に出す文言。予定は「14:00 歯医者」。
+    var isAllDay: Bool { allDay == true }
+
+    /// 時刻のある予定は、始まってからこの時間だけ文字盤に残す
+    static let keepAfterStart: TimeInterval = 60 * 60
+
+    /// 文字盤から外れる時刻。時刻の予定は開始から1時間後、終日の予定は終わる時刻
+    var hideAt: Date? {
+        guard kind == .event, let start else { return nil }
+        return isAllDay ? (end ?? start.addingTimeInterval(24 * 60 * 60)) : start.addingTimeInterval(Self.keepAfterStart)
+    }
+
+    /// 文字盤に出す文言。予定は「14:00 歯医者」、終日は「終日 誕生日」（明日のものは「明日 誕生日」）。
     var displayText: String {
         guard kind == .event, let start else { return title }
+        let today = Calendar.current.isDateInToday(start)
+        if isAllDay { return today ? "終日 \(title)" : "明日 \(title)" }
         let time = Self.hhmm.string(from: start)
-        let prefix = Calendar.current.isDateInToday(start) ? "" : "明日"
-        return "\(prefix)\(time) \(title)"
+        return "\(today ? "" : "明日")\(time) \(title)"
     }
 
     private static let hhmm: DateFormatter = {
@@ -94,7 +110,8 @@ struct FaceItem: Codable, Equatable, Identifiable {
 struct FacePayload: Codable, Equatable {
     var layout: FaceLayout
     var reminders: [FaceItem]   // 上位数件（並び順どおり）
-    var events: [FaceItem]      // これから24時間の予定のうち終日でないもの（開始時刻順）。開始済みは受信側で落とす
+    /// 予定。時刻のあるもの（開始1時間後まで）と終日のもの。並べ方と外す時刻は受信側の FaceComposer が決める
+    var events: [FaceItem]
     var updatedAt: Date
 
     static let empty = FacePayload(layout: .default, reminders: [], events: [], updatedAt: .distantPast)
@@ -108,7 +125,7 @@ struct FacePayload: Codable, Equatable {
     /// 「前回と同じ内容か」を見るための署名。updatedAt は含めない。
     var signature: String {
         let r = reminders.map { "\($0.id):\($0.title)" }.joined(separator: "|")
-        let e = events.map { "\($0.id):\($0.title):\($0.start?.timeIntervalSince1970 ?? 0)" }.joined(separator: "|")
+        let e = events.map { "\($0.id):\($0.title):\($0.start?.timeIntervalSince1970 ?? 0):\($0.isAllDay)" }.joined(separator: "|")
         return "\(layout.lines)/\(layout.calendarSlots)#\(r)#\(e)"
     }
 }
@@ -119,7 +136,10 @@ enum FaceComposer {
     /// リマインダー枠 → 予定枠 の順に並べ、片方が足りなければもう片方で埋める。
     static func items(_ p: FacePayload, at now: Date) -> [FaceItem] {
         let layout = p.layout.clamped
-        let upcoming = p.events.filter { ($0.start ?? .distantPast) > now }
+        // 時刻のある予定を先に（開始順）、行が余ったら終日の予定を後ろに
+        let visible = p.events.filter { ($0.hideAt ?? .distantPast) > now }
+        let upcoming = visible.filter { !$0.isAllDay }.sorted { ($0.start ?? .distantPast) < ($1.start ?? .distantPast) }
+                     + visible.filter(\.isAllDay)
         var reminders = Array(p.reminders.prefix(layout.reminderSlots))
         var events = Array(upcoming.prefix(layout.calendarSlots))
         // 埋め草
@@ -149,10 +169,10 @@ enum FaceComposer {
              + (0..<l.calendarSlots).map { FaceLine(text: "予定\($0 + 1)", kind: .event) }
     }
 
-    /// 表示が変わる時刻。予定の開始時刻ごとに文字盤を切り替えるためにウィジェットが使う。
+    /// 表示が変わる時刻。予定が文字盤から外れる時刻（開始1時間後・終日の終わり）ごとにウィジェットが描き直す。
     static func changePoints(_ p: FacePayload, after now: Date) -> [Date] {
         guard p.layout.usesCalendar else { return [] }
-        return p.events.compactMap(\.start).filter { $0 > now }.sorted()
+        return Array(Set(p.events.compactMap(\.hideAt).filter { $0 > now })).sorted()
     }
 }
 
