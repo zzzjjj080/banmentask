@@ -1,9 +1,19 @@
 import Foundation
 
-/// どのビルドが実機に入っているかを見分けるための印。コードを push するたびに増やす。
-/// iPhone / Watch の画面右上に極小で出る。文字盤には出さない。
+/// 実機にどのビルドが入っているかを画面で確かめるための表示。
+/// 「1.1 (4) · b46 09/16 22:30」＝ 版 (ビルド番号) · b<コミット数> ビルド時刻。
+/// 印は手で増やさない。install.sh がビルドのたびに BT_BUILD_STAMP を渡す（引き継ぎ書 4-145）。
+/// iPhone は画面のいちばん下、Watch は更新ボタンの下に小さく出す。文字盤には出さない。
 enum BuildInfo {
-    static let marker = "b46"
+    static var line: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        let stamp = info?["BTBuildStamp"] as? String ?? ""
+        // Xcode から直接ビルドした時は展開されないので、その時は版だけ出す
+        let hasStamp = !stamp.isEmpty && !stamp.hasPrefix("$(")
+        return hasStamp ? "\(version) (\(build)) · \(stamp)" : "\(version) (\(build))"
+    }
 }
 
 enum AppGroup {

@@ -56,15 +56,15 @@ struct WatchContentView: View {
             .buttonStyle(.borderedProminent)
             .tint(Color(white: 0.25))
             .disabled(session.isBusy)
+
+            // どのビルドが入っているか（いちばん下）
+            Text(BuildInfo.line)
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(.quaternary)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
-        .overlay(alignment: .topTrailing) {
-            Text(BuildInfo.marker)
-                .font(.system(size: 8, design: .monospaced))
-                .foregroundStyle(.quaternary)
-                .padding(.trailing, 2)
-        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { session.requestRefresh() }
         }

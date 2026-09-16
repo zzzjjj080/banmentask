@@ -14,9 +14,16 @@ DD=/tmp/banmentask-build
 echo "→ プロジェクト生成"
 xcodegen generate --quiet
 
+# 実機の画面に出す印。手で増やさない（引き継ぎ書 4-145）。未コミットの変更があれば + を付ける
+STAMP="b$(git rev-list --count HEAD)$(git diff --quiet HEAD -- . || echo +) $(date '+%m/%d %H:%M')"
+
 # 端末の特定は JSON で行う。テキスト出力の grep は列ズレで別の ID を拾うことがある。
 DEVJSON=/tmp/banmentask-devices.json
+# 古い一覧が残っていると、いなくなった端末の識別子を拾って
+# 「CoreDeviceService was unable to locate a device」で失敗する。毎回作り直す
+rm -f "$DEVJSON"
 xcrun devicectl list devices --json-output "$DEVJSON" >/dev/null 2>&1 || true
+[ -s "$DEVJSON" ] || { echo "❌ 端末の一覧を取得できませんでした"; exit 1; }
 pick() {  # pick <platform>  → identifier（接続中を優先）
   python3 - "$1" "$DEVJSON" <<'PY2'
 import json, sys
@@ -50,7 +57,7 @@ build() {  # build <scheme> <platform>  失敗したら 1 を返す
   mkdir -p "$DD"
   if xcodebuild -project BanmenTask.xcodeproj -scheme "$1" -configuration Debug \
       -destination "generic/platform=$2" -derivedDataPath "$DD" \
-      -allowProvisioningUpdates build >"$log" 2>&1; then
+      -allowProvisioningUpdates BT_BUILD_STAMP="$STAMP" build >"$log" 2>&1; then
     grep -E 'BUILD SUCCEEDED' "$log" || true
     return 0
   fi
@@ -81,4 +88,4 @@ if [ "$WHAT" = both ] || [ "$WHAT" = watch ]; then
 fi
 
 echo
-echo "Watch アプリの右下に BuildInfo.marker（現在: $(grep -o 'marker = "[^"]*"' Shared/TaskStore.swift | cut -d'"' -f2)）が出ていれば入れ替わっています。"
+echo "画面のいちばん下（Watch は更新ボタンの下）に「$STAMP」が出ていれば入れ替わっています。"

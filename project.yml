@@ -34,6 +34,8 @@ targets:
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # 実機に入っている版を画面に出すための印。install.sh が毎回渡す（引き継ぎ書 4-145）
+        BTBuildStamp: "$(BT_BUILD_STAMP)"
         UILaunchScreen: {}
         ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
@@ -72,6 +74,8 @@ targets:
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # 実機に入っている版を画面に出すための印。install.sh が毎回渡す（引き継ぎ書 4-145）
+        BTBuildStamp: "$(BT_BUILD_STAMP)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSRemindersFullAccessUsageDescription: ホーム画面のウィジェットからリマインダーを表示・完了するために使います
@@ -99,6 +103,8 @@ targets:
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # 実機に入っている版を画面に出すための印。install.sh が毎回渡す（引き継ぎ書 4-145）
+        BTBuildStamp: "$(BT_BUILD_STAMP)"
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.zzzjjj080.banmentask
         WKWatchOnly: false
@@ -131,6 +137,8 @@ targets:
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # 実機に入っている版を画面に出すための印。install.sh が毎回渡す（引き継ぎ書 4-145）
+        BTBuildStamp: "$(BT_BUILD_STAMP)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
