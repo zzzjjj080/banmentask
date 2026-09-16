@@ -20,6 +20,17 @@ final class WatchSession: NSObject, ObservableObject {
         super.init()
         WCSession.default.delegate = self
         WCSession.default.activate()
+        #if DEBUG
+        // 動作確認・撮影用。iPhone と繋いでいなくても見本のタスクを出す
+        if ProcessInfo.processInfo.environment["BT_DEMO"] == "1" {
+            tasks = FacePayload(layout: FaceLayout(reminders: 2, calendar: 1),
+                                reminders: [FaceItem(id: "r1", kind: .reminder, title: "洗濯する", start: nil),
+                                            FaceItem(id: "r2", kind: .reminder, title: "電話する", start: nil)],
+                                events: [FaceItem(id: "e1", kind: .event, title: "歯医者",
+                                                  start: Date.now.addingTimeInterval(60 * 90))],
+                                updatedAt: .now)
+        }
+        #endif
     }
 
     /// iPhone に「いまリマインダーを読み直して」と頼む。
