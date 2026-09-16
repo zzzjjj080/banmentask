@@ -33,6 +33,11 @@ try:
 except Exception:
     sys.exit(0)
 cands = [d for d in devices if d.get("hardwareProperties", {}).get("platform") == platform]
+# 届かない端末は候補から外す。手放した端末が一覧に残っていると、そちらを選んで
+# 「unable to locate a device」で失敗する（引き継ぎ書 4-150）
+# watchOS は iPhone 経由なので disconnected でも届く
+cands = [d for d in cands
+         if d.get("connectionProperties", {}).get("tunnelState") in ("connected", "connecting", "disconnected")]
 cands.sort(key=lambda d: d.get("connectionProperties", {}).get("tunnelState") != "connected")
 if cands:
     print(cands[0]["identifier"])
