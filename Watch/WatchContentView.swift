@@ -14,6 +14,8 @@ struct WatchContentView: View {
 
     var body: some View {
         let items = FaceComposer.items(session.tasks, at: .now)
+        // 画面に収まらない分（版の表示など）まで届くようにスクロールさせる
+        ScrollView {
         VStack(alignment: .leading, spacing: 6) {
             if items.isEmpty {
                 Text(session.tasks.layout.usesReminders ? "タスクなし" : "予定なし")
@@ -27,8 +29,6 @@ struct WatchContentView: View {
                     row(item, index: index)
                 }
             }
-
-            Spacer()
 
             if let error = session.lastError {
                 Text(error).font(.footnote).foregroundStyle(.orange).lineLimit(2)
@@ -62,9 +62,11 @@ struct WatchContentView: View {
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.quaternary)
                 .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { session.requestRefresh() }
         }
