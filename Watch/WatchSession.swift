@@ -56,7 +56,7 @@ final class WatchSession: NSObject, ObservableObject {
                 guard queued != nil else { return }   // その間に繋がって送れた
                 queued = nil
                 isBusy = false
-                lastError = "iPhone に接続できません。近くにあるか確認してください"
+                lastError = String(localized: "iPhone に接続できません。近くにあるか確認してください")
             }
             return
         }

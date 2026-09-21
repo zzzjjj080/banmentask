@@ -108,9 +108,9 @@ struct FaceItem: Codable, Equatable, Identifiable {
     var displayText: String {
         guard kind == .event, let start else { return title }
         let today = Calendar.current.isDateInToday(start)
-        if isAllDay { return today ? "終日 \(title)" : "明日 \(title)" }
+        if isAllDay { return today ? String(localized: "終日 \(title)") : String(localized: "明日 \(title)") }
         let time = Self.hhmm.string(from: start)
-        return "\(today ? "" : "明日")\(time) \(title)"
+        return today ? "\(time) \(title)" : String(localized: "明日\(time) \(title)")
     }
 
     private static let hhmm: DateFormatter = {
@@ -132,8 +132,8 @@ struct FacePayload: Codable, Equatable {
     static let empty = FacePayload(layout: .default, reminders: [], events: [], updatedAt: .distantPast)
     static let placeholder = FacePayload(
         layout: FaceLayout(lines: 2, calendarSlots: 1),
-        reminders: [FaceItem(id: "r1", kind: .reminder, title: "洗濯する", start: nil)],
-        events: [FaceItem(id: "e1", kind: .event, title: "歯医者",
+        reminders: [FaceItem(id: "r1", kind: .reminder, title: String(localized: "洗濯する"), start: nil)],
+        events: [FaceItem(id: "e1", kind: .event, title: String(localized: "歯医者"),
                           start: Calendar.current.date(byAdding: .hour, value: 2, to: .now))],
         updatedAt: .now)
 
@@ -180,8 +180,8 @@ enum FaceComposer {
     /// iPhone のプレビュー用。実データではなく「リマインダー1 / 予定1」のような例文。
     static func exampleLines(_ layout: FaceLayout) -> [FaceLine] {
         let l = layout.clamped
-        return (0..<l.reminderSlots).map { FaceLine(text: "リマインダー\($0 + 1)", kind: .reminder) }
-             + (0..<l.calendarSlots).map { FaceLine(text: "予定\($0 + 1)", kind: .event) }
+        return (0..<l.reminderSlots).map { FaceLine(text: String(localized: "リマインダー\($0 + 1)"), kind: .reminder) }
+             + (0..<l.calendarSlots).map { FaceLine(text: String(localized: "予定\($0 + 1)"), kind: .event) }
     }
 
     /// 表示が変わる時刻。予定が文字盤から外れる時刻（開始1時間後・終日の終わり）ごとにウィジェットが描き直す。

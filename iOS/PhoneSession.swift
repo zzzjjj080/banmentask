@@ -20,7 +20,7 @@ final class PhoneSession: NSObject, ObservableObject {
     private static let lastResultKey = "lastResult"
 
     private override init() {
-        lastResult = UserDefaults.standard.string(forKey: Self.lastResultKey) ?? "未送信"
+        lastResult = UserDefaults.standard.string(forKey: Self.lastResultKey) ?? String(localized: "未送信")
         super.init()
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
@@ -53,7 +53,7 @@ final class PhoneSession: NSObject, ObservableObject {
         try? WCSession.default.updateApplicationContext(payload.payload)
         UserDefaults.standard.set(payload.signature, forKey: Self.lastSentKey)
         let stamp = Date.now.formatted(date: .omitted, time: .shortened)
-        lastResult = "\(stamp) \(reason): Watch に直接返答（転送枠は消費しない）"
+        lastResult = String(localized: "\(stamp) \(reason): Watch に直接返答（転送枠は消費しない）")
     }
 
     /// 2経路で送る。
@@ -63,22 +63,22 @@ final class PhoneSession: NSObject, ObservableObject {
     func send(_ tasks: FacePayload, reason: String) async -> Bool {
         let stamp = Date.now.formatted(date: .omitted, time: .shortened)
         guard await ensureActivated() else {
-            lastResult = "\(stamp) \(reason): WCSession 未接続（5秒待っても接続できず）"
+            lastResult = String(localized: "\(stamp) \(reason): WCSession 未接続（5秒待っても接続できず）")
             return false
         }
         let session = WCSession.default
         do {
             try session.updateApplicationContext(tasks.payload)
         } catch {
-            lastResult = "\(stamp) \(reason): applicationContext 失敗 \(error.localizedDescription)"
+            lastResult = String(localized: "\(stamp) \(reason): applicationContext 失敗 \(error.localizedDescription)")
         }
 
         if session.isComplicationEnabled {
             session.transferCurrentComplicationUserInfo(tasks.payload)
-            lastResult = "\(stamp) \(reason): 送信済み（文字盤経由・残り \(session.remainingComplicationUserInfoTransfers) 回/日）"
+            lastResult = String(localized: "\(stamp) \(reason): 送信済み（文字盤経由・残り \(session.remainingComplicationUserInfoTransfers) 回/日）")
         } else {
             session.transferUserInfo(tasks.payload)
-            lastResult = "\(stamp) \(reason): 送信済み（通常転送・文字盤に未配置）"
+            lastResult = String(localized: "\(stamp) \(reason): 送信済み（通常転送・文字盤に未配置）")
         }
         refresh()
         return true
@@ -126,7 +126,7 @@ extension PhoneSession: WCSessionDelegate {
                     _ = await ReminderSource.completeHeadless(id: id)
                 }
                 let payload = await ReminderSource.fetchFacePayload()
-                if let payload { await noteDelivered(payload, reason: "watch完了") }
+                if let payload { await noteDelivered(payload, reason: String(localized: "Watch で完了")) }
                 replyHandler(payload?.payload ?? [:])
             default:
                 replyHandler([:])

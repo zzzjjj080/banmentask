@@ -43,7 +43,7 @@ struct BanmenTaskWidgetView: View {
         case .accessoryRectangular:
             rectangular
         case .accessoryInline:
-            Text(first.isEmpty ? "タスクなし" : first)
+            (first.isEmpty ? Text("タスクなし") : Text(first))
         case .accessoryCorner:
             Image(systemName: "checklist")
                 .widgetLabel(first)

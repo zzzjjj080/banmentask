@@ -2,6 +2,8 @@
 # Info.plist と .entitlements もここから自動生成されるので、手で書く必要はない。
 name: BanmenTask
 options:
+  # 開発言語は英語。日本語も訳として明示的に持たせる（引き継ぎ書 4-157）
+  developmentLanguage: en
   bundleIdPrefix: com.zzzjjj080
   deploymentTarget:
     iOS: "17.0"
@@ -30,7 +32,8 @@ targets:
     info:
       path: iOS/Info.plist
       properties:
-        CFBundleDisplayName: 盤面タスク
+        # 訳が無いときの値（英語）。各言語の名前は InfoPlist.xcstrings（Tools/gen-localizations.py が作る）
+        CFBundleDisplayName: TaskFace
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
@@ -40,8 +43,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         # v1 で EventKit を使う時に必要。v0 では未使用だが先に入れておく。
-        NSRemindersFullAccessUsageDescription: 文字盤に表示するタスクを読み取るためにリマインダーへアクセスします
-        NSCalendarsFullAccessUsageDescription: 今日のこれからの予定を文字盤に出すためにカレンダーを読み取ります
+        NSRemindersFullAccessUsageDescription: TaskFace reads your reminders to show them on your watch face.
+        NSCalendarsFullAccessUsageDescription: TaskFace reads today's upcoming events to show them on your watch face.
         # v3: バックグラウンド更新
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [com.zzzjjj080.banmentask.refresh]
@@ -70,7 +73,8 @@ targets:
     info:
       path: HomeWidget/Info.plist
       properties:
-        CFBundleDisplayName: 盤面タスク
+        # 訳が無いときの値（英語）。各言語の名前は InfoPlist.xcstrings（Tools/gen-localizations.py が作る）
+        CFBundleDisplayName: TaskFace
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
@@ -78,7 +82,7 @@ targets:
         BTBuildStamp: "$(BT_BUILD_STAMP)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
-        NSRemindersFullAccessUsageDescription: ホーム画面のウィジェットからリマインダーを表示・完了するために使います
+        NSRemindersFullAccessUsageDescription: Used to show your reminders in the Home Screen widget.
     entitlements:
       path: HomeWidget/BanmenTaskHomeWidget.entitlements
       properties:
@@ -99,7 +103,8 @@ targets:
     info:
       path: Watch/Info.plist
       properties:
-        CFBundleDisplayName: 盤面タスク
+        # 訳が無いときの値（英語）。各言語の名前は InfoPlist.xcstrings（Tools/gen-localizations.py が作る）
+        CFBundleDisplayName: TaskFace
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
@@ -133,7 +138,8 @@ targets:
     info:
       path: WatchWidget/Info.plist
       properties:
-        CFBundleDisplayName: 盤面タスク
+        # 訳が無いときの値（英語）。各言語の名前は InfoPlist.xcstrings（Tools/gen-localizations.py が作る）
+        CFBundleDisplayName: TaskFace
         # 版はビルド設定から取る。埋め込みの Watch アプリ・拡張と食い違うと審査で弾かれる
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"

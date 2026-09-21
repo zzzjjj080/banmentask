@@ -24,8 +24,9 @@ enum FaceStyle {
     static func color(_ index: Int) -> Color {
         palette[((index % palette.count) + palette.count) % palette.count].color
     }
+    /// 色の名前は端末の言語で（表の日本語はカタログのキー）
     static func name(_ index: Int) -> String {
-        palette[((index % palette.count) + palette.count) % palette.count].name
+        String(localized: String.LocalizationValue(palette[((index % palette.count) + palette.count) % palette.count].name))
     }
     static func next(_ index: Int) -> Int { (index + 1) % palette.count }
 

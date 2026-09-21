@@ -127,15 +127,15 @@ struct ContentView: View {
                 break
             }
         }
-        .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
-        .onChange(of: source.events) { _, _ in send(force: false, reason: "予定") }
+        .onChange(of: source.items) { _, _ in send(force: false, reason: String(localized: "画面")) }
+        .onChange(of: source.events) { _, _ in send(force: false, reason: String(localized: "予定")) }
         .onChange(of: source.layout) { old, layout in
             if layout.usesCalendar && !source.calendarGranted {
                 Task { await source.requestCalendarAccess(); await source.reload() }
             } else if old.allDayEvents != layout.allDayEvents {
                 Task { await source.reload() }
             }
-            send(force: false, reason: "表示設定")
+            send(force: false, reason: String(localized: "表示設定"))
         }
         // 編集中の行からフォーカスが外れたら確定
         .onChange(of: focusedID) { old, new in
@@ -553,7 +553,7 @@ struct ContentView: View {
             Button {
                 Haptic.confirm()
                 cooldownUntil = Date.now.addingTimeInterval(cooldown)
-                send(force: true, reason: "手動")
+                send(force: true, reason: String(localized: "手動"))
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: waiting ? "hourglass" : "arrow.triangle.2.circlepath")
@@ -640,7 +640,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Text(demoConnected ? "21:46 画面: 送信済み（文字盤を即時更新）" : session.lastResult)
+            Text(demoConnected ? String(localized: "21:46 画面: 送信済み（文字盤を即時更新）") : session.lastResult)
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(dim)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -653,14 +653,14 @@ struct ContentView: View {
 
     /// いまの接続状態を1行で言う。線が途切れている場所ごとに、何をすればいいかを添える。
     private func connectionSummary(paired: Bool, installed: Bool, onFace: Bool) -> String {
-        if !paired { return "Apple Watch とペアリングされていません" }
-        if !installed { return "Watch に盤面タスクが入っていません。iPhone の Watch アプリからインストール" }
-        if !onFace { return "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク" }
-        return "接続OK。変更は数秒で文字盤に反映されます"
+        if !paired { return String(localized: "Apple Watch とペアリングされていません") }
+        if !installed { return String(localized: "Watch に盤面タスクが入っていません。iPhone の Watch アプリからインストール") }
+        if !onFace { return String(localized: "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク") }
+        return String(localized: "接続OK。変更は数秒で文字盤に反映されます")
     }
 
     /// 経路上の1点。丸の中にアイコン、下にラベル。OK なら白、そうでなければ薄く。
-    private func node(_ symbol: String, label: String, ok: Bool) -> some View {
+    private func node(_ symbol: String, label: LocalizedStringKey, ok: Bool) -> some View {
         VStack(spacing: 8) {
             ZStack {
                 Circle()

@@ -76,11 +76,11 @@ final class ReminderSource: ObservableObject {
         do {
             accessGranted = try await store.requestFullAccessToReminders()
         } catch {
-            errorMessage = "リマインダーへのアクセス失敗: \(error.localizedDescription)"
+            errorMessage = String(localized: "リマインダーへのアクセス失敗: \(error.localizedDescription)")
             return
         }
         guard accessGranted else {
-            errorMessage = "設定 → プライバシー → リマインダー で許可してください"
+            errorMessage = String(localized: "設定 → プライバシー → リマインダー で許可してください")
             return
         }
         if layout.usesCalendar { await requestCalendarAccess() }
@@ -93,10 +93,12 @@ final class ReminderSource: ObservableObject {
 
     #if DEBUG
     private func seedDemo() async {
-        guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
+        guard let calendar = ReminderList.find(in: store, named: listName)
                 ?? store.calendars(for: .reminder).first else { return }
         listName = calendar.title
+        // スクリーンショット用。端末の言語で出す（英語のスクショに日本語のタスクが並ばないように）
         let titles = ["iPhone返送", "バットテープ巻く", "牛乳を買う", "図書館に本を返す", "振込", "写真を整理"]
+            .map { String(localized: String.LocalizationValue($0)) }
         for (i, title) in titles.enumerated() {
             let r = EKReminder(eventStore: store)
             r.title = title
@@ -113,7 +115,7 @@ final class ReminderSource: ObservableObject {
     private func seedDemoEvents() async {
         guard EventSource.isAuthorized, EventSource.upcoming24h(store).isEmpty,
               let calendar = store.defaultCalendarForNewEvents else { return }
-        for (hours, title) in [(2.0, "打ち合わせ"), (5.0, "歯医者")] {
+        for (hours, title) in [(2.0, String(localized: "打ち合わせ")), (5.0, String(localized: "歯医者"))] {
             let e = EKEvent(eventStore: store)
             e.title = title
             e.calendar = calendar
@@ -129,7 +131,7 @@ final class ReminderSource: ObservableObject {
     func requestCalendarAccess() async {
         calendarGranted = await EventSource.requestAccess(store)
         if !calendarGranted {
-            errorMessage = "設定 → プライバシー → カレンダー で許可すると予定を出せます"
+            errorMessage = String(localized: "設定 → プライバシー → カレンダー で許可すると予定を出せます")
         }
     }
 
@@ -138,11 +140,14 @@ final class ReminderSource: ObservableObject {
         let calendars = store.calendars(for: .reminder)
         listNames = calendars.map(\.title).sorted()
 
-        guard let calendar = calendars.first(where: { $0.title == listName }) else {
+        guard let calendar = ReminderList.find(in: store, named: listName) else {
             items = []
-            errorMessage = "リスト「\(listName)」が見つかりません"
+            errorMessage = String(localized: "リマインダーのリストがありません")
             return
         }
+        // 選んだリストが無かった（英語の端末の「基本」など）→ 実際に使うリストの名前に合わせる。
+        // listName の didSet が保存と読み直しをする
+        if calendar.title != listName { listName = calendar.title; return }
         errorMessage = nil
 
         let predicate = store.predicateForIncompleteReminders(
@@ -193,11 +198,11 @@ final class ReminderSource: ObservableObject {
                 try store.save(reminder, commit: false)
                 changed = true
             } catch {
-                errorMessage = "保存失敗: \(error.localizedDescription)"
+                errorMessage = String(localized: "保存失敗: \(error.localizedDescription)")
             }
         }
         if changed {
-            do { try store.commit() } catch { errorMessage = "commit 失敗: \(error.localizedDescription)" }
+            do { try store.commit() } catch { errorMessage = String(localized: "保存失敗: \(error.localizedDescription)") }
         }
         await reload()
     }
@@ -207,7 +212,7 @@ final class ReminderSource: ObservableObject {
     func add(title: String) async {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
-              let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
+              let calendar = ReminderList.find(in: store, named: listName)
         else { return }
         let reminder = EKReminder(eventStore: store)
         reminder.title = trimmed
@@ -234,7 +239,7 @@ final class ReminderSource: ObservableObject {
     private func write(_ body: () throws -> Void) async {
         isCommitting = true
         defer { isCommitting = false }
-        do { try body() } catch { errorMessage = "保存失敗: \(error.localizedDescription)" }
+        do { try body() } catch { errorMessage = String(localized: "保存失敗: \(error.localizedDescription)") }
         await reload()
     }
 
@@ -265,7 +270,7 @@ final class ReminderSource: ObservableObject {
         let store = EKEventStore()
         let listName = LayoutStore.listName
         let layout = LayoutStore.load()
-        guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName })
+        guard let calendar = ReminderList.find(in: store, named: listName)
         else { return nil }
 
         let predicate = store.predicateForIncompleteReminders(

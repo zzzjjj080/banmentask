@@ -27,7 +27,7 @@ struct CoffeeTipSection: View {
                 notice(message, color: .red)
                 closeButton
             case .unavailable:
-                notice("いまは受け付けられません", color: dim)
+                notice(String(localized: "いまは受け付けられません"), color: dim)
             default:
                 button
             }

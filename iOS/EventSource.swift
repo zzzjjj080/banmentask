@@ -46,9 +46,17 @@ enum EventSource {
     }
 
     /// 祝日のカレンダーか。iOS に「祝日かどうか」を返す API は無いので名前で見分ける。
-    /// iCloud の「日本の祝日」（照会カレンダー）も、Google の「日本の祝日」もこれで外れる
+    /// iCloud の祝日カレンダーは端末の言語で名前が変わる（日本の祝日 / US Holidays / Feiertage …）。
+    /// Google の「日本の祝日」もこれで外れる
+    static let holidayWords = [
+        "祝日", "休日", "祭日", "holiday",          // 日本語・英語
+        "feiertag", "férié", "ferie", "festiv",     // ドイツ語・フランス語・イタリア語・スペイン語
+        "feriado", "праздни", "假日", "节假日",       // ポルトガル語・ロシア語・中国語
+        "공휴일", "휴일", "عطل", "feestdag",          // 韓国語・アラビア語・オランダ語
+        "helgdag", "tatil", "libur",                // スウェーデン語・トルコ語・インドネシア語
+    ]
     static func isHolidayCalendar(_ calendar: EKCalendar) -> Bool {
         let title = calendar.title.lowercased()
-        return ["祝日", "休日", "祭日", "holiday"].contains { title.contains($0) }
+        return holidayWords.contains { title.contains($0) }
     }
 }

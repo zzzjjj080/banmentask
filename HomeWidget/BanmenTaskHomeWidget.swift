@@ -24,7 +24,7 @@ enum HomeReminders {
     static func load(listName: String, limit: Int) -> [HomeItem] {
         guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return [] }
         let store = EKEventStore()
-        guard let calendar = store.calendars(for: .reminder).first(where: { $0.title == listName }) else { return [] }
+        guard let calendar = ReminderList.find(in: store, named: listName) else { return [] }
         let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: nil, calendars: [calendar])
         let sem = DispatchSemaphore(value: 0)
         var found: [EKReminder] = []
@@ -46,10 +46,10 @@ enum HomeReminders {
 
 struct HomeProvider: TimelineProvider {
     func placeholder(in context: Context) -> HomeEntry {
-        HomeEntry(date: .now, listName: "基本",
-                  items: [HomeItem(id: "1", title: "洗濯する"),
-                          HomeItem(id: "2", title: "電話する"),
-                          HomeItem(id: "3", title: "牛乳を買う")],
+        HomeEntry(date: .now, listName: String(localized: "基本"),
+                  items: [HomeItem(id: "1", title: String(localized: "洗濯する")),
+                          HomeItem(id: "2", title: String(localized: "電話する")),
+                          HomeItem(id: "3", title: String(localized: "牛乳を買う"))],
                   layout: .default)
     }
 
