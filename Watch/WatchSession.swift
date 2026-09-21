@@ -24,9 +24,9 @@ final class WatchSession: NSObject, ObservableObject {
         // 動作確認・撮影用。iPhone と繋いでいなくても見本のタスクを出す
         if ProcessInfo.processInfo.environment["BT_DEMO"] == "1" {
             tasks = FacePayload(layout: FaceLayout(reminders: 2, calendar: 1),
-                                reminders: [FaceItem(id: "r1", kind: .reminder, title: "洗濯する", start: nil),
-                                            FaceItem(id: "r2", kind: .reminder, title: "電話する", start: nil)],
-                                events: [FaceItem(id: "e1", kind: .event, title: "歯医者",
+                                reminders: [FaceItem(id: "r1", kind: .reminder, title: String(localized: "洗濯する"), start: nil),
+                                            FaceItem(id: "r2", kind: .reminder, title: String(localized: "電話する"), start: nil)],
+                                events: [FaceItem(id: "e1", kind: .event, title: String(localized: "歯医者"),
                                                   start: Date.now.addingTimeInterval(60 * 90))],
                                 updatedAt: .now)
         }
