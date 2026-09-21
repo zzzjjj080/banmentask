@@ -64,10 +64,13 @@ struct WatchMockView: View {
             HStack(alignment: .bottom) {
                 dateComplication
                 Spacer()
-                Text(Date.now, style: .time)
+                // 本物の文字盤と同じく AM/PM は付けない。英語圏で「12:09 PM」が2行に割れていた
+                Text(Date.now.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute()))
                     .font(.system(size: 34, weight: .medium, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
             Spacer(minLength: 6)
             rectangularSlot
