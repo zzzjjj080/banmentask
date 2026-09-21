@@ -158,7 +158,7 @@ final class ReminderSource: ObservableObject {
             .sorted(by: Self.order)
 
         calendarGranted = EventSource.isAuthorized
-        events = layout.usesCalendar ? EventSource.upcoming24h(store) : []
+        events = layout.usesCalendar ? EventSource.upcoming24h(store, includeAllDay: layout.allDayEvents) : []
         // ホーム画面ウィジェットにも反映
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -279,7 +279,7 @@ final class ReminderSource: ObservableObject {
                         priority: $0.priority,
                         created: $0.creationDate ?? .distantPast) }
             .sorted(by: order)
-        let events = layout.usesCalendar ? EventSource.upcoming24h(store) : []
+        let events = layout.usesCalendar ? EventSource.upcoming24h(store, includeAllDay: layout.allDayEvents) : []
         return facePayload(layout: layout, items: items, events: events)
     }
 }

@@ -31,6 +31,8 @@ struct FaceLayout: Codable, Equatable {
     var calendarSlots: Int  // 0〜lines
     var reminderColor: Int  // FaceStyle.palette の添字
     var eventColor: Int
+    /// 終日の予定を出すか。祝日はこれと関係なく出さない（EventSource.isHolidayCalendar）
+    var allDayEvents: Bool = true
 
     static let `default` = FaceLayout(lines: 2, calendarSlots: 0)
 
@@ -53,6 +55,7 @@ struct FaceLayout: Codable, Equatable {
         calendarSlots = try c.decode(Int.self, forKey: .calendarSlots)
         reminderColor = try c.decodeIfPresent(Int.self, forKey: .reminderColor) ?? 0
         eventColor = try c.decodeIfPresent(Int.self, forKey: .eventColor) ?? 9
+        allDayEvents = try c.decodeIfPresent(Bool.self, forKey: .allDayEvents) ?? true
     }
 
     func color(_ kind: FaceItem.Kind) -> Int { kind == .reminder ? reminderColor : eventColor }
@@ -61,12 +64,14 @@ struct FaceLayout: Codable, Equatable {
     var usesCalendar: Bool { calendarSlots > 0 }
     var usesReminders: Bool { reminderSlots > 0 }
 
-    /// 範囲に収める（合計1〜maxLines）。**色はそのまま残す。**
+    /// 範囲に収める（合計1〜maxLines）。**行数以外はそのまま残す。**
     /// b38 までは色を渡し忘れていて、選んだ色が保存も送信もされず、いつも既定色に戻っていた。
+    /// 作り直さずに写しを直すので、項目を足しても渡し忘れない。
     var clamped: FaceLayout {
-        let l = min(max(lines, 1), Self.maxLines)
-        return FaceLayout(lines: l, calendarSlots: min(max(calendarSlots, 0), l),
-                          reminderColor: reminderColor, eventColor: eventColor)
+        var c = self
+        c.lines = min(max(lines, 1), Self.maxLines)
+        c.calendarSlots = min(max(calendarSlots, 0), c.lines)
+        return c
     }
 }
 

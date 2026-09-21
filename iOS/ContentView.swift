@@ -129,9 +129,11 @@ struct ContentView: View {
         }
         .onChange(of: source.items) { _, _ in send(force: false, reason: "画面") }
         .onChange(of: source.events) { _, _ in send(force: false, reason: "予定") }
-        .onChange(of: source.layout) { _, layout in
+        .onChange(of: source.layout) { old, layout in
             if layout.usesCalendar && !source.calendarGranted {
                 Task { await source.requestCalendarAccess(); await source.reload() }
+            } else if old.allDayEvents != layout.allDayEvents {
+                Task { await source.reload() }
             }
             send(force: false, reason: "表示設定")
         }
@@ -190,8 +192,11 @@ struct ContentView: View {
             return
         }
         Haptic.select()
-        source.layout = FaceLayout(reminders: reminders, calendar: calendar,
-                                   reminderColor: source.layout.reminderColor, eventColor: source.layout.eventColor)
+        // 作り直すと色や「終日の予定」を渡し忘れる（b38 の色が戻る不具合）。行数だけ書き換える
+        var l = source.layout
+        l.lines = reminders + calendar
+        l.calendarSlots = calendar
+        source.layout = l
     }
 
     /// 上段「リマインダー　● 白 ▾」、下段「−　2　＋」。色は押すと15色の一覧が開く
@@ -219,10 +224,38 @@ struct ContentView: View {
             }
             .frame(height: 42)
             .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            if kind == .event { allDayToggle }
         }
         .padding(10)
         .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(edge, lineWidth: 1))
+    }
+
+    /// 「終日の予定 ✓」。押すたびに出す／出さない。祝日はこれと関係なく出さない
+    private var allDayToggle: some View {
+        let on = source.layout.allDayEvents
+        return Button {
+            Haptic.select()
+            source.layout.allDayEvents.toggle()
+        } label: {
+            HStack(spacing: 6) {
+                Text("終日の予定")
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 4)
+                Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(on ? Color.white : Color(white: 0.45))
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .background(Color(white: 0.17), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("終日の予定")
+        .accessibilityValue(on ? "出す" : "出さない")
     }
 
     private func stepButton(_ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
