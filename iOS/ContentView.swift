@@ -45,6 +45,13 @@ struct ContentView: View {
                     #endif
                 }
         }
+        // 時計・電池の帯の裏に一覧が透けないよう、上端を背景色で覆う
+        // （高さ0の帯の「背景」を上の余白まで広げると、ちょうど状態表示の高さになる。
+        //   帯そのものに ignoresSafeArea を付けても、固定した高さ0が勝って広がらない）
+        .overlay(alignment: .top) {
+            Color.clear.frame(height: 0)
+                .background(bg.ignoresSafeArea(edges: .top))
+        }
     }
 
     private var content: some View {

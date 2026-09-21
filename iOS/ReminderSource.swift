@@ -95,6 +95,13 @@ final class ReminderSource: ObservableObject {
     private func seedDemo() async {
         guard let calendar = ReminderList.find(in: store, named: listName)
                 ?? store.calendars(for: .reminder).first else { return }
+        // シミュレータは既定のリストを最初の起動時の言語で作る（英語で撮っても「リマインダー」になる）。
+        // 撮影用に、端末の言語での呼び名（英語なら Reminders）に付け直す
+        let localizedName = String(localized: "基本")
+        if calendar.title != localizedName, calendar.allowsContentModifications {
+            calendar.title = localizedName
+            try? store.saveCalendar(calendar, commit: true)
+        }
         listName = calendar.title
         // スクリーンショット用。端末の言語で出す（英語のスクショに日本語のタスクが並ばないように）
         let titles = ["iPhone返送", "バットテープ巻く", "牛乳を買う", "図書館に本を返す", "振込", "写真を整理"]
