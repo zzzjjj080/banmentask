@@ -58,9 +58,12 @@ struct WatchContentView: View {
             .disabled(session.isBusy)
 
             // どのビルドが入っているか（いちばん下）
+            // 実機で読める濃さに（.quaternary の9ptは黒地でほぼ見えなかった）
             Text(BuildInfo.line)
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.quaternary)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 4)
         }
