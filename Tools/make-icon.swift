@@ -9,6 +9,9 @@
 import AppKit
 
 let out = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "icon.png"
+// 行の描き方: ja（日本語の文字・1.2 まで）/ en（英語の文字）/ bars（文字なしの棒）
+// 175か国で配信しているので、bars なら言語に依存しない
+let mode = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "ja"
 let S: CGFloat = 1024
 func gray(_ g: CGFloat) -> CGColor { CGColor(gray: g, alpha: 1) }
 let red = CGColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1)
@@ -53,8 +56,18 @@ text("10:09", font(132, .medium, rounded: true), gray(1), right: CGPoint(x: R, y
 
 let slot = CGRect(x: L, y: 460, width: R - L, height: 320)
 rrect(slot, 54, fill: gray(0.16))
-text("洗濯する", font(104, .bold), red, left: CGPoint(x: L + 42, y: 560))
-text("電話する", font(104, .bold), red, left: CGPoint(x: L + 42, y: 690))
+switch mode {
+case "bars":
+    // 文字の代わりに角丸の棒2本。1行目は幅いっぱい、2行目は短く
+    rrect(CGRect(x: L + 42, y: 560 - 34, width: (R - L) - 130, height: 68), 34, fill: red)
+    rrect(CGRect(x: L + 42, y: 690 - 34, width: ((R - L) - 130) * 0.62, height: 68), 34, fill: red)
+case "en":
+    text("Do laundry", font(96, .bold), red, left: CGPoint(x: L + 42, y: 560))
+    text("Call Mom", font(96, .bold), red, left: CGPoint(x: L + 42, y: 690))
+default:
+    text("洗濯する", font(104, .bold), red, left: CGPoint(x: L + 42, y: 560))
+    text("電話する", font(104, .bold), red, left: CGPoint(x: L + 42, y: 690))
+}
 
 NSGraphicsContext.restoreGraphicsState()
 try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: out))

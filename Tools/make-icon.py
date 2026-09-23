@@ -4,6 +4,8 @@
   python3 Tools/make-icon.py            watch 版（既定。Apple Watch の輪郭の中に2行）
   python3 Tools/make-icon.py text       text 版（黒地に2行だけ）
   python3 Tools/make-icon.py bars       bars 版（円＋バー）
+  python3 Tools/make-icon.py watch-bars watch-bars 版（Watch の輪郭＋円とバー。文字なし＝言語に依存しない）
+  python3 Tools/make-icon.py <版> --preview   アセットに入れず、候補の画像だけ作る
 
 出力先: iOS/Assets.xcassets と Watch/Assets.xcassets の AppIcon（1024x1024）
 """
@@ -23,8 +25,9 @@ def circle(d, cx, cy, r, color, width):
 def bar(d, x, y, w, h, color):
     d.rounded_rectangle([x, y, x + w, y + h], radius=h // 2, fill=color)
 
-def render_watch():
-    """Apple Watch の輪郭の中に、文字盤のコンプリケーションを描く。"""
+def render_watch(bars=False):
+    """Apple Watch の輪郭の中に、文字盤のコンプリケーションを描く。
+    bars=True なら、行を文字ではなく棒で描く（175か国で配信しているので、言語に依存させない）。"""
     BG = (255, 255, 255)
     BAND = (70, 70, 74)
     CASE = (52, 52, 56)
@@ -59,14 +62,21 @@ def render_watch():
     for cy, color, label, scale in rows:
         r = int(r0 * scale)
         circle(d, sx0 + pad + r0, cy, r, color, int(10 * scale))
-        font = ImageFont.truetype(FONT, int(size * scale))
-        d.text((x0, cy), label, font=font, fill=color, anchor="lm",
-               stroke_width=max(2, int(size * scale) // 25), stroke_fill=color)
+        if bars:
+            h = int(58 * scale)
+            w = int((sx1 - pad - x0) * (1.0 if scale == 1.0 else 0.66))
+            bar(d, x0, cy - h // 2, w, h, color)
+        else:
+            font = ImageFont.truetype(FONT, int(size * scale))
+            d.text((x0, cy), label, font=font, fill=color, anchor="lm",
+                   stroke_width=max(2, int(size * scale) // 25), stroke_fill=color)
     return img
 
 def render(variant):
     if variant == "watch":
         return render_watch()
+    if variant == "watch-bars":
+        return render_watch(bars=True)
     img = Image.new("RGB", (SIZE, SIZE), BLACK)
     d = ImageDraw.Draw(img)
     # watchOS は円マスクなので、中央 70% に収める
@@ -106,6 +116,12 @@ def write_asset(img, xcassets_dir, platform):
 if __name__ == "__main__":
     variant = sys.argv[1] if len(sys.argv) > 1 else "watch"
     img = render(variant)
+    if "--preview" in sys.argv:
+        out = os.path.join(ROOT, "store", "icon-candidates-global")
+        os.makedirs(out, exist_ok=True)
+        img.save(os.path.join(out, f"{variant}.png"))
+        print(f"候補だけ作った: store/icon-candidates-global/{variant}.png")
+        sys.exit(0)
     write_asset(img, os.path.join(ROOT, "iOS", "Assets.xcassets"), "ios")
     write_asset(img, os.path.join(ROOT, "Watch", "Assets.xcassets"), "watchos")
     img.save(os.path.join(ROOT, "Tools", f"icon-preview-{variant}.png"))
