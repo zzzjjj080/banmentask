@@ -18,8 +18,8 @@ settings:
     SWIFT_VERSION: "5.10"
     SWIFT_STRICT_CONCURRENCY: minimal
     ENABLE_USER_SCRIPT_SANDBOXING: false
-    MARKETING_VERSION: "1.2"
-    CURRENT_PROJECT_VERSION: "7"
+    MARKETING_VERSION: "1.3"
+    CURRENT_PROJECT_VERSION: "8"
 
 targets:
   # ─────────────────────────── iOS 本体 ───────────────────────────
