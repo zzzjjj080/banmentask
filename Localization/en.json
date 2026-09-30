@@ -14,7 +14,6 @@
   "%@ %@: 送信済み（文字盤経由・残り %lld 回/日）": "%@ %@: Sent (via watch face, %lld left today)",
   "%@ %@: 送信済み（通常転送・文字盤に未配置）": "%@ %@: Sent (regular transfer, not on watch face)",
   "21:46 画面: 送信済み（文字盤を即時更新）": "21:46 Screen: Sent (watch face updated instantly)",
-  "%lld 回も奢ってくれてありがとうございました": "Thanks for the %lld coffees!",
   "Apple Watch とペアリングされていません": "Not paired with an Apple Watch",
   "Watch で完了": "Completed on Watch",
   "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク": "Reaches the Watch, but it's not on a watch face yet. Touch and hold the face → Edit → put TaskFace in a rectangular slot",
@@ -23,9 +22,6 @@
   "iPhone に接続できません。近くにあるか確認してください": "Can't reach iPhone. Make sure it's nearby.",
   "iPhone の盤面タスクで追加してください": "Add tasks in TaskFace on iPhone",
   "あと %lld 秒": "%lld s left",
-  "ありがとうございます": "Thank you",
-  "いまは受け付けられません": "Unavailable right now",
-  "このアプリが気に入ったら": "If you like this app",
   "もう一度タップで取り消し": "Tap again to undo",
   "タスクなし": "No tasks",
   "タスク名": "Task name",
@@ -48,7 +44,6 @@
   "出す": "Shown",
   "取り消し": "Undo",
   "基本": "Reminders",
-  "奢ってくれてありがとうございました": "Thanks for the coffee!",
   "手動": "Manual",
   "画面": "Screen",
   "打ち合わせ": "Meeting",
@@ -81,12 +76,8 @@
   "表示設定": "Display",
   "設定 → プライバシー → カレンダー で許可すると予定を出せます": "Allow access in Settings → Privacy → Calendars to show events",
   "設定 → プライバシー → リマインダー で許可してください": "Allow access in Settings → Privacy → Reminders",
-  "購入できませんでした": "Purchase failed",
-  "購入を確認できませんでした": "Couldn't verify the purchase",
   "転送枠": "Transfers",
   "追加": "Add",
-  "閉じる": "Close",
-  "開発者にコーヒーを奢る": "Buy the developer a coffee",
   "白": "White",
   "グレー": "Gray",
   "赤": "Red",
@@ -101,7 +92,8 @@
   "紫": "Purple",
   "ピンク": "Pink",
   "茶": "Brown",
-  "黒": "Black"
+  "黒": "Black",
+  "作者の他のアプリ": "More apps by this developer"
  },
  "infoplist": {
   "CFBundleDisplayName": "TaskFace",
@@ -115,8 +107,8 @@
   "subtitle": "Your to-dos on the watch face",
   "keywords": "todo,to-do,complication,widget,tasks,checklist,calendar,agenda,wrist,glance,priority,planner",
   "promo": "Raise your wrist and see what's next. TaskFace keeps your top reminders and upcoming events on your Apple Watch face — always visible, always in sync.",
-  "whatsNew": "• New app icon\n• The version number on Apple Watch is easier to read",
-  "description": "TaskFace keeps the top items of the built-in Reminders app on your Apple Watch face, all the time.\n\nJust raise your wrist to see what to do next. Your reminders stay where they are: adding with Siri, syncing across devices and viewing in the Reminders app all work as before.\n\n■ On your watch face\n• Shows your top reminders (up to 4 lines) in a watch face complication\n• Supported faces: Modular, Modular Compact, Infograph Modular\n• Show upcoming calendar events too. Choose how many lines, and how many of them are for events\n• Events stay for 1 hour after they start. All-day events fill spare lines. Holidays are not shown\n• 15 colors for reminders and events\n\n■ Arrange on iPhone\n• Drag to reorder — the order is saved as the priority in Reminders itself\n• Add, complete and rename right in TaskFace. Changes go to your watch face instantly\n• Check off an item on Apple Watch and you have 5 seconds to undo\n• A Home Screen widget shows the same list\n\n■ Always up to date\n• Set up one Shortcuts automation to refresh the face whenever you close Reminders, and you're done\n• Tap the complication to update it on the spot\n\n■ Your data\n• Uses only the reminders and calendars on your iPhone. The app stores nothing of its own\n• No account. No ads. No analytics\n• The only in-app purchase is a tip to buy the developer a coffee. It changes nothing\n\nRequires an iPhone paired with an Apple Watch."
+  "whatsNew": "• The tip (one coffee) is gone. There are no in-app purchases any more\n• In its place, a link to the developer's other apps",
+  "description": "TaskFace keeps the top items of the built-in Reminders app on your Apple Watch face, all the time.\n\nJust raise your wrist to see what to do next. Your reminders stay where they are: adding with Siri, syncing across devices and viewing in the Reminders app all work as before.\n\n■ On your watch face\n• Shows your top reminders (up to 4 lines) in a watch face complication\n• Supported faces: Modular, Modular Compact, Infograph Modular\n• Show upcoming calendar events too. Choose how many lines, and how many of them are for events\n• Events stay for 1 hour after they start. All-day events fill spare lines. Holidays are not shown\n• 15 colors for reminders and events\n\n■ Arrange on iPhone\n• Drag to reorder — the order is saved as the priority in Reminders itself\n• Add, complete and rename right in TaskFace. Changes go to your watch face instantly\n• Check off an item on Apple Watch and you have 5 seconds to undo\n• A Home Screen widget shows the same list\n\n■ Always up to date\n• Set up one Shortcuts automation to refresh the face whenever you close Reminders, and you're done\n• Tap the complication to update it on the spot\n\n■ Your data\n• Uses only the reminders and calendars on your iPhone. The app stores nothing of its own\n• No account. No ads. No analytics\n• The app never connects to the internet. Nothing leaves your devices\n\nRequires an iPhone paired with an Apple Watch."
  },
  "iap": {
   "name": "One Coffee",

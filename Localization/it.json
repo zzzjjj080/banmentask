@@ -15,7 +15,6 @@
   "%@ %@: 送信済み（文字盤経由・残り %lld 回/日）": "%@ %@: inviato (tramite quadrante, ancora %lld oggi)",
   "%@ %@: 送信済み（通常転送・文字盤に未配置）": "%@ %@: inviato (trasferimento normale, non sul quadrante)",
   "21:46 画面: 送信済み（文字盤を即時更新）": "21:46 Schermata: inviato (quadrante aggiornato subito)",
-  "%lld 回も奢ってくれてありがとうございました": "Grazie per i %lld caffè!",
   "Apple Watch とペアリングされていません": "Nessun Apple Watch abbinato",
   "Watch で完了": "Completato su Watch",
   "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク": "Arriva su Watch, ma non è ancora su nessun quadrante. Tieni premuto il quadrante → Modifica → metti TaskFace in uno spazio rettangolare",
@@ -24,9 +23,6 @@
   "iPhone に接続できません。近くにあるか確認してください": "Impossibile raggiungere iPhone. Assicurati che sia vicino.",
   "iPhone の盤面タスクで追加してください": "Aggiungi attività in TaskFace su iPhone",
   "あと %lld 秒": "Ancora %lld s",
-  "ありがとうございます": "Grazie",
-  "いまは受け付けられません": "Non disponibile ora",
-  "このアプリが気に入ったら": "Se ti piace questa app",
   "もう一度タップで取り消し": "Tocca di nuovo per annullare",
   "タスクなし": "Nessuna attività",
   "タスク名": "Nome attività",
@@ -49,7 +45,6 @@
   "出す": "Mostrati",
   "取り消し": "Annulla",
   "基本": "Promemoria",
-  "奢ってくれてありがとうございました": "Grazie per il caffè!",
   "手動": "Manuale",
   "画面": "Schermata",
   "打ち合わせ": "Riunione",
@@ -81,12 +76,8 @@
   "表示設定": "Visualizzazione",
   "設定 → プライバシー → カレンダー で許可すると予定を出せます": "Consenti l’accesso in Impostazioni → Privacy e sicurezza → Calendari per mostrare gli eventi",
   "設定 → プライバシー → リマインダー で許可してください": "Consenti l’accesso in Impostazioni → Privacy e sicurezza → Promemoria",
-  "購入できませんでした": "Acquisto non riuscito",
-  "購入を確認できませんでした": "Impossibile verificare l’acquisto",
   "転送枠": "Trasferimenti",
   "追加": "Aggiungi",
-  "閉じる": "Chiudi",
-  "開発者にコーヒーを奢る": "Offri un caffè allo sviluppatore",
   "白": "Bianco",
   "グレー": "Grigio",
   "赤": "Rosso",
@@ -101,7 +92,8 @@
   "紫": "Viola",
   "ピンク": "Rosa",
   "茶": "Marrone",
-  "黒": "Nero"
+  "黒": "Nero",
+  "作者の他のアプリ": "Altre app dello sviluppatore"
  },
  "infoplist": {
   "CFBundleDisplayName": "TaskFace",
@@ -115,8 +107,8 @@
   "subtitle": "I tuoi impegni sul quadrante",
   "keywords": "attività,to-do,cose da fare,complicazione,widget,lista,checklist,calendario,agenda,orologio,priorità",
   "promo": "Alza il polso e scopri cosa ti aspetta. TaskFace mostra i promemoria principali e i prossimi eventi sul quadrante di Apple Watch, sempre in vista e aggiornati.",
-  "whatsNew": "• Nuova icona dell’app\n• Il numero di versione su Apple Watch è più leggibile",
-  "description": "TaskFace mostra sempre i primi elementi dell’app Promemoria sul quadrante del tuo Apple Watch.\n\nTi basta alzare il polso per sapere cosa fare dopo. I promemoria restano dove sono: aggiungerli con Siri, sincronizzarli tra i dispositivi e vederli nell’app Promemoria funziona come prima.\n\n■ Sul quadrante\n• Mostra i primi promemoria (fino a 4 righe) in una complicazione\n• Quadranti supportati: Modulare, Modulare compatto, Infografico modulare\n• Mostra anche i prossimi eventi del calendario. Scegli quante righe usare e quante dedicarne agli eventi\n• Gli eventi restano visibili per 1 ora dopo l’inizio. Quelli di tutto il giorno riempiono le righe libere. Le festività non vengono mostrate\n• 15 colori per promemoria ed eventi\n\n■ Organizza su iPhone\n• Trascina per riordinare: l’ordine viene salvato come priorità direttamente in Promemoria\n• Aggiungi, completa e rinomina direttamente in TaskFace. Le modifiche arrivano subito sul quadrante\n• Se spunti un elemento su Apple Watch, hai 5 secondi per annullare\n• Un widget della schermata Home mostra lo stesso elenco\n\n■ Sempre aggiornato\n• Crea un’automazione nell’app Comandi Rapidi che aggiorni il quadrante ogni volta che chiudi Promemoria, e il gioco è fatto\n• Tocca la complicazione per aggiornarla all’istante\n\n■ I tuoi dati\n• Usa solo i promemoria e i calendari del tuo iPhone. L’app non salva nulla per conto suo\n• Nessun account. Nessuna pubblicità. Nessuna analisi\n• L’unico acquisto in-app è una mancia per offrire un caffè allo sviluppatore. Non cambia nulla\n\nRichiede un iPhone abbinato a un Apple Watch."
+  "whatsNew": "• La mancia (un caffè) è stata rimossa. Non ci sono più acquisti in‑app\n• Al suo posto, un link alle altre app dello sviluppatore",
+  "description": "TaskFace mostra sempre i primi elementi dell’app Promemoria sul quadrante del tuo Apple Watch.\n\nTi basta alzare il polso per sapere cosa fare dopo. I promemoria restano dove sono: aggiungerli con Siri, sincronizzarli tra i dispositivi e vederli nell’app Promemoria funziona come prima.\n\n■ Sul quadrante\n• Mostra i primi promemoria (fino a 4 righe) in una complicazione\n• Quadranti supportati: Modulare, Modulare compatto, Infografico modulare\n• Mostra anche i prossimi eventi del calendario. Scegli quante righe usare e quante dedicarne agli eventi\n• Gli eventi restano visibili per 1 ora dopo l’inizio. Quelli di tutto il giorno riempiono le righe libere. Le festività non vengono mostrate\n• 15 colori per promemoria ed eventi\n\n■ Organizza su iPhone\n• Trascina per riordinare: l’ordine viene salvato come priorità direttamente in Promemoria\n• Aggiungi, completa e rinomina direttamente in TaskFace. Le modifiche arrivano subito sul quadrante\n• Se spunti un elemento su Apple Watch, hai 5 secondi per annullare\n• Un widget della schermata Home mostra lo stesso elenco\n\n■ Sempre aggiornato\n• Crea un’automazione nell’app Comandi Rapidi che aggiorni il quadrante ogni volta che chiudi Promemoria, e il gioco è fatto\n• Tocca la complicazione per aggiornarla all’istante\n\n■ I tuoi dati\n• Usa solo i promemoria e i calendari del tuo iPhone. L’app non salva nulla per conto suo\n• Nessun account. Nessuna pubblicità. Nessuna analisi\n• L’app non si connette a internet. Nulla esce dai tuoi dispositivi\n\nRichiede un iPhone abbinato a un Apple Watch."
  },
  "iap": {
   "name": "Un caffè",

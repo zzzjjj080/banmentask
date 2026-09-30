@@ -14,7 +14,6 @@
   "%@ %@: 送信済み（文字盤経由・残り %lld 回/日）": "%@ %@: Skickat (via urtavlan, %lld kvar i dag)",
   "%@ %@: 送信済み（通常転送・文字盤に未配置）": "%@ %@: Skickat (vanlig överföring, inte på urtavlan)",
   "21:46 画面: 送信済み（文字盤を即時更新）": "21:46 Skärm: Skickat (urtavlan uppdaterades direkt)",
-  "%lld 回も奢ってくれてありがとうございました": "Tack för kaffet! Antal: %lld",
   "Apple Watch とペアリングされていません": "Inte parkopplad med en Apple Watch",
   "Watch で完了": "Utförd på Watch",
   "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク": "Når Watch, men finns inte på någon urtavla än. Håll på urtavlan → Redigera → lägg TaskFace i en rektangulär plats",
@@ -23,9 +22,6 @@
   "iPhone に接続できません。近くにあるか確認してください": "Kan inte nå iPhone. Kontrollera att den är i närheten.",
   "iPhone の盤面タスクで追加してください": "Lägg till uppgifter i TaskFace på iPhone",
   "あと %lld 秒": "%lld s kvar",
-  "ありがとうございます": "Tack",
-  "いまは受け付けられません": "Inte tillgängligt just nu",
-  "このアプリが気に入ったら": "Om du gillar appen",
   "もう一度タップで取り消し": "Tryck igen för att ångra",
   "タスクなし": "Inga uppgifter",
   "タスク名": "Uppgiftsnamn",
@@ -48,7 +44,6 @@
   "出す": "Visas",
   "取り消し": "Ångra",
   "基本": "Påminnelser",
-  "奢ってくれてありがとうございました": "Tack för kaffet!",
   "手動": "Manuellt",
   "画面": "Skärm",
   "打ち合わせ": "Möte",
@@ -81,12 +76,8 @@
   "表示設定": "Visning",
   "設定 → プライバシー → カレンダー で許可すると予定を出せます": "Ge åtkomst i Inställningar → Integritet och säkerhet → Kalendrar för att visa händelser",
   "設定 → プライバシー → リマインダー で許可してください": "Ge åtkomst i Inställningar → Integritet och säkerhet → Påminnelser",
-  "購入できませんでした": "Köpet misslyckades",
-  "購入を確認できませんでした": "Kunde inte verifiera köpet",
   "転送枠": "Överföringar",
   "追加": "Lägg till",
-  "閉じる": "Stäng",
-  "開発者にコーヒーを奢る": "Bjud utvecklaren på kaffe",
   "白": "Vit",
   "グレー": "Grå",
   "赤": "Röd",
@@ -101,7 +92,8 @@
   "紫": "Lila",
   "ピンク": "Rosa",
   "茶": "Brun",
-  "黒": "Svart"
+  "黒": "Svart",
+  "作者の他のアプリ": "Fler appar från utvecklaren"
  },
  "infoplist": {
   "CFBundleDisplayName": "TaskFace",
@@ -115,8 +107,8 @@
   "subtitle": "Dina uppgifter på urtavlan",
   "keywords": "todo,att göra,komplikation,widget,checklista,kalender,planerare,handled,lista,agenda,göromål",
   "promo": "Lyft handleden och se vad som väntar. TaskFace håller dina viktigaste påminnelser och kommande händelser på urtavlan på Apple Watch – alltid synliga, alltid synkade.",
-  "whatsNew": "• Ny appsymbol\n• Versionsnumret på Apple Watch är lättare att läsa",
-  "description": "TaskFace visar de översta objekten från den inbyggda appen Påminnelser på urtavlan på Apple Watch – hela tiden.\n\nLyft bara handleden för att se vad du ska göra härnäst. Dina påminnelser ligger kvar där de är: att lägga till med Siri, synka mellan enheter och visa dem i Påminnelser fungerar precis som förut.\n\n■ På urtavlan\n• Visar dina översta påminnelser (upp till 4 rader) i en komplikation\n• Urtavlor som stöds: Modulär, Modulär kompakt, Infograf modulär\n• Visa även kommande kalenderhändelser. Välj antal rader och hur många av dem som ska vara händelser\n• Händelser ligger kvar i 1 timme efter start. Heldagshändelser fyller lediga rader. Helgdagar visas inte\n• 15 färger för påminnelser och händelser\n\n■ Ordna på iPhone\n• Dra för att ändra ordning – den sparas som prioritet direkt i Påminnelser\n• Lägg till, bocka av och byt namn direkt i TaskFace. Ändringar når urtavlan direkt\n• Bocka av något på Apple Watch så har du 5 sekunder på dig att ångra\n• En widget på hemskärmen visar samma lista\n\n■ Alltid aktuell\n• Ställ in en automation i Genvägar som uppdaterar urtavlan när du stänger Påminnelser – sedan är det klart\n• Tryck på komplikationen för att uppdatera den direkt\n\n■ Dina data\n• Använder bara påminnelserna och kalendrarna på din iPhone. Appen sparar ingenting själv\n• Inget konto. Ingen reklam. Ingen analys\n• Det enda köpet i appen är dricks för att bjuda utvecklaren på kaffe. Det ändrar ingenting\n\nKräver en iPhone som är parkopplad med en Apple Watch."
+  "whatsNew": "• Dricksen (en kopp kaffe) är borttagen. Det finns inga köp i appen längre\n• I stället en länk till utvecklarens andra appar",
+  "description": "TaskFace visar de översta objekten från den inbyggda appen Påminnelser på urtavlan på Apple Watch – hela tiden.\n\nLyft bara handleden för att se vad du ska göra härnäst. Dina påminnelser ligger kvar där de är: att lägga till med Siri, synka mellan enheter och visa dem i Påminnelser fungerar precis som förut.\n\n■ På urtavlan\n• Visar dina översta påminnelser (upp till 4 rader) i en komplikation\n• Urtavlor som stöds: Modulär, Modulär kompakt, Infograf modulär\n• Visa även kommande kalenderhändelser. Välj antal rader och hur många av dem som ska vara händelser\n• Händelser ligger kvar i 1 timme efter start. Heldagshändelser fyller lediga rader. Helgdagar visas inte\n• 15 färger för påminnelser och händelser\n\n■ Ordna på iPhone\n• Dra för att ändra ordning – den sparas som prioritet direkt i Påminnelser\n• Lägg till, bocka av och byt namn direkt i TaskFace. Ändringar når urtavlan direkt\n• Bocka av något på Apple Watch så har du 5 sekunder på dig att ångra\n• En widget på hemskärmen visar samma lista\n\n■ Alltid aktuell\n• Ställ in en automation i Genvägar som uppdaterar urtavlan när du stänger Påminnelser – sedan är det klart\n• Tryck på komplikationen för att uppdatera den direkt\n\n■ Dina data\n• Använder bara påminnelserna och kalendrarna på din iPhone. Appen sparar ingenting själv\n• Inget konto. Ingen reklam. Ingen analys\n• Appen ansluter aldrig till internet. Inget lämnar dina enheter\n\nKräver en iPhone som är parkopplad med en Apple Watch."
  },
  "iap": {
   "name": "En kopp kaffe",

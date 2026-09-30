@@ -15,7 +15,6 @@
   "%@ %@: 送信済み（文字盤経由・残り %lld 回/日）": "%@ %@: enviado (pelo mostrador, restam %lld hoje)",
   "%@ %@: 送信済み（通常転送・文字盤に未配置）": "%@ %@: enviado (transferência normal, fora do mostrador)",
   "21:46 画面: 送信済み（文字盤を即時更新）": "21:46 Tela: enviado (mostrador atualizado na hora)",
-  "%lld 回も奢ってくれてありがとうございました": "Obrigado pelos %lld cafés!",
   "Apple Watch とペアリングされていません": "Nenhum Apple Watch emparelhado",
   "Watch で完了": "Concluído no Watch",
   "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク": "Chega ao Watch, mas ainda não está em nenhum mostrador. Mantenha o mostrador pressionado → Editar → coloque o TaskFace em um espaço retangular",
@@ -24,9 +23,6 @@
   "iPhone に接続できません。近くにあるか確認してください": "Não foi possível conectar ao iPhone. Verifique se ele está por perto.",
   "iPhone の盤面タスクで追加してください": "Adicione tarefas no TaskFace do iPhone",
   "あと %lld 秒": "Faltam %lld s",
-  "ありがとうございます": "Obrigado",
-  "いまは受け付けられません": "Indisponível no momento",
-  "このアプリが気に入ったら": "Se você gosta deste app",
   "もう一度タップで取り消し": "Toque de novo para desfazer",
   "タスクなし": "Nenhuma tarefa",
   "タスク名": "Nome da tarefa",
@@ -49,7 +45,6 @@
   "出す": "Visíveis",
   "取り消し": "Desfazer",
   "基本": "Lembretes",
-  "奢ってくれてありがとうございました": "Obrigado pelo café!",
   "手動": "Manual",
   "画面": "Tela",
   "打ち合わせ": "Reunião",
@@ -81,12 +76,8 @@
   "表示設定": "Exibição",
   "設定 → プライバシー → カレンダー で許可すると予定を出せます": "Permita o acesso em Ajustes → Privacidade e Segurança → Calendários para mostrar eventos",
   "設定 → プライバシー → リマインダー で許可してください": "Permita o acesso em Ajustes → Privacidade e Segurança → Lembretes",
-  "購入できませんでした": "Não foi possível comprar",
-  "購入を確認できませんでした": "Não foi possível verificar a compra",
   "転送枠": "Transferências",
   "追加": "Adicionar",
-  "閉じる": "Fechar",
-  "開発者にコーヒーを奢る": "Pagar um café ao desenvolvedor",
   "白": "Branco",
   "グレー": "Cinza",
   "赤": "Vermelho",
@@ -101,7 +92,8 @@
   "紫": "Roxo",
   "ピンク": "Rosa",
   "茶": "Marrom",
-  "黒": "Preto"
+  "黒": "Preto",
+  "作者の他のアプリ": "Outros apps do desenvolvedor"
  },
  "infoplist": {
   "CFBundleDisplayName": "TaskFace",
@@ -115,8 +107,8 @@
   "subtitle": "Suas tarefas no mostrador",
   "keywords": "tarefas,to-do,afazeres,complicação,widget,lista,calendário,agenda,mostrador,relógio,prioridade",
   "promo": "Levante o pulso e veja o que vem a seguir. O TaskFace mostra seus principais lembretes e próximos eventos no mostrador do Apple Watch, sempre à vista e em sincronia.",
-  "whatsNew": "• Novo ícone do app\n• O número da versão no Apple Watch ficou mais legível",
-  "description": "O TaskFace mantém os primeiros itens do app Lembretes sempre no mostrador do seu Apple Watch.\n\nBasta levantar o pulso para ver o que fazer em seguida. Seus lembretes continuam onde estão: adicionar com a Siri, sincronizar entre dispositivos e ver no app Lembretes funcionam como antes.\n\n■ No mostrador\n• Mostra seus primeiros lembretes (até 4 linhas) em uma complicação\n• Mostradores compatíveis: Modular, Modular Compacto, Infográfico Modular\n• Mostra também os próximos eventos do calendário. Escolha quantas linhas usar e quantas ficam para eventos\n• Os eventos ficam por 1 hora depois de começar. Os de dia inteiro preenchem as linhas livres. Feriados não são exibidos\n• 15 cores para lembretes e eventos\n\n■ Organize no iPhone\n• Arraste para reordenar — a ordem é salva como prioridade no próprio app Lembretes\n• Adicione, conclua e renomeie direto no TaskFace. As alterações chegam ao mostrador na hora\n• Marcou um item no Apple Watch? Você tem 5 segundos para desfazer\n• Um widget da Tela de Início mostra a mesma lista\n\n■ Sempre atualizado\n• Configure uma automação no app Atalhos para atualizar o mostrador sempre que fechar o Lembretes, e pronto\n• Toque na complicação para atualizá-la na hora\n\n■ Seus dados\n• Usa apenas os lembretes e calendários do seu iPhone. O app não guarda nada por conta própria\n• Sem conta. Sem anúncios. Sem análises\n• A única compra dentro do app é uma gorjeta para pagar um café ao desenvolvedor. Não muda nada\n\nRequer um iPhone emparelhado com um Apple Watch."
+  "whatsNew": "• A gorjeta (um café) foi removida. Não há mais compras no app\n• No lugar dela, um link para os outros apps do desenvolvedor",
+  "description": "O TaskFace mantém os primeiros itens do app Lembretes sempre no mostrador do seu Apple Watch.\n\nBasta levantar o pulso para ver o que fazer em seguida. Seus lembretes continuam onde estão: adicionar com a Siri, sincronizar entre dispositivos e ver no app Lembretes funcionam como antes.\n\n■ No mostrador\n• Mostra seus primeiros lembretes (até 4 linhas) em uma complicação\n• Mostradores compatíveis: Modular, Modular Compacto, Infográfico Modular\n• Mostra também os próximos eventos do calendário. Escolha quantas linhas usar e quantas ficam para eventos\n• Os eventos ficam por 1 hora depois de começar. Os de dia inteiro preenchem as linhas livres. Feriados não são exibidos\n• 15 cores para lembretes e eventos\n\n■ Organize no iPhone\n• Arraste para reordenar — a ordem é salva como prioridade no próprio app Lembretes\n• Adicione, conclua e renomeie direto no TaskFace. As alterações chegam ao mostrador na hora\n• Marcou um item no Apple Watch? Você tem 5 segundos para desfazer\n• Um widget da Tela de Início mostra a mesma lista\n\n■ Sempre atualizado\n• Configure uma automação no app Atalhos para atualizar o mostrador sempre que fechar o Lembretes, e pronto\n• Toque na complicação para atualizá-la na hora\n\n■ Seus dados\n• Usa apenas os lembretes e calendários do seu iPhone. O app não guarda nada por conta própria\n• Sem conta. Sem anúncios. Sem análises\n• O app nunca se conecta à internet. Nada sai dos seus dispositivos\n\nRequer um iPhone emparelhado com um Apple Watch."
  },
  "iap": {
   "name": "Um café",

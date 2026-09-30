@@ -14,7 +14,6 @@
   "%@ %@: 送信済み（文字盤経由・残り %lld 回/日）": "%@ %@: Gönderildi (saat kadranı üzerinden, bugün %lld kaldı)",
   "%@ %@: 送信済み（通常転送・文字盤に未配置）": "%@ %@: Gönderildi (normal aktarım, kadranda değil)",
   "21:46 画面: 送信済み（文字盤を即時更新）": "21:46 Ekran: Gönderildi (kadran anında güncellendi)",
-  "%lld 回も奢ってくれてありがとうございました": "%lld kahve için teşekkürler!",
   "Apple Watch とペアリングされていません": "Bir Apple Watch ile eşlenmemiş",
   "Watch で完了": "Watch'ta tamamlandı",
   "Watch には届きますが、文字盤に未配置。文字盤を長押し → 編集 → 横長スロットに盤面タスク": "Watch'a ulaşıyor ancak henüz bir kadranda değil. Kadrana dokunup basılı tutun → Düzenle → TaskFace'i dikdörtgen bir alana ekleyin",
@@ -23,9 +22,6 @@
   "iPhone に接続できません。近くにあるか確認してください": "iPhone'a ulaşılamıyor. Yakında olduğundan emin olun.",
   "iPhone の盤面タスクで追加してください": "Görevleri iPhone'daki TaskFace'te ekleyin",
   "あと %lld 秒": "%lld sn kaldı",
-  "ありがとうございます": "Teşekkürler",
-  "いまは受け付けられません": "Şu anda kullanılamıyor",
-  "このアプリが気に入ったら": "Bu uygulamayı beğendiyseniz",
   "もう一度タップで取り消し": "Geri almak için yeniden dokunun",
   "タスクなし": "Görev yok",
   "タスク名": "Görev adı",
@@ -48,7 +44,6 @@
   "出す": "Görünür",
   "取り消し": "Geri al",
   "基本": "Anımsatıcılar",
-  "奢ってくれてありがとうございました": "Kahve için teşekkürler!",
   "手動": "Elle",
   "画面": "Ekran",
   "打ち合わせ": "Toplantı",
@@ -81,12 +76,8 @@
   "表示設定": "Görüntü",
   "設定 → プライバシー → カレンダー で許可すると予定を出せます": "Etkinlikleri göstermek için Ayarlar → Gizlilik ve Güvenlik → Takvimler'de erişime izin verin",
   "設定 → プライバシー → リマインダー で許可してください": "Ayarlar → Gizlilik ve Güvenlik → Anımsatıcılar'da erişime izin verin",
-  "購入できませんでした": "Satın alma başarısız",
-  "購入を確認できませんでした": "Satın alma doğrulanamadı",
   "転送枠": "Aktarımlar",
   "追加": "Ekle",
-  "閉じる": "Kapat",
-  "開発者にコーヒーを奢る": "Geliştiriciye bir kahve ısmarla",
   "白": "Beyaz",
   "グレー": "Gri",
   "赤": "Kırmızı",
@@ -101,7 +92,8 @@
   "紫": "Mor",
   "ピンク": "Pembe",
   "茶": "Kahverengi",
-  "黒": "Siyah"
+  "黒": "Siyah",
+  "作者の他のアプリ": "Geliştiricinin diğer uygulamaları"
  },
  "infoplist": {
   "CFBundleDisplayName": "TaskFace",
@@ -115,8 +107,8 @@
   "subtitle": "Yapılacaklarınız kadranınızda",
   "keywords": "yapılacaklar,todo,görev,liste,komplikasyon,widget,takvim,ajanda,plan,hatırlatıcı,not,öncelik,bilek",
   "promo": "Bileğinizi kaldırın, sırada ne olduğunu görün. TaskFace en önemli anımsatıcılarınızı ve yaklaşan etkinliklerinizi Apple Watch kadranında hep görünür ve eşzamanlı tutar.",
-  "whatsNew": "• Yeni uygulama simgesi\n• Apple Watch’taki sürüm numarası daha okunaklı",
-  "description": "TaskFace, yerleşik Anımsatıcılar uygulamasındaki en üstteki öğeleri Apple Watch kadranınızda sürekli gösterir.\n\nSırada ne yapacağınızı görmek için bileğinizi kaldırmanız yeterli. Anımsatıcılarınız olduğu yerde kalır: Siri ile ekleme, aygıtlar arasında eşzamanlama ve Anımsatıcılar uygulamasında görüntüleme eskisi gibi çalışır.\n\n■ Saat kadranınızda\n• En üstteki anımsatıcılarınızı (en fazla 4 satır) bir kadran komplikasyonunda gösterir\n• Desteklenen kadranlar: Modüler, Modüler Kompakt, Infograph Modüler\n• Yaklaşan takvim etkinliklerini de gösterin. Kaç satır olacağını ve bunların kaçının etkinliklere ayrılacağını seçin\n• Etkinlikler başladıktan sonra 1 saat kalır. Tüm gün etkinlikleri boş satırları doldurur. Resmî tatiller gösterilmez\n• Anımsatıcılar ve etkinlikler için 15 renk\n\n■ iPhone'da düzenleyin\n• Sıralamak için sürükleyin — sıra, Anımsatıcılar'ın kendisinde öncelik olarak kaydedilir\n• Doğrudan TaskFace'te ekleyin, tamamlayın ve yeniden adlandırın. Değişiklikler kadrana anında ulaşır\n• Apple Watch'ta bir öğeyi tamamladığınızda geri almak için 5 saniyeniz olur\n• Ana ekran widget'ı aynı listeyi gösterir\n\n■ Her zaman güncel\n• Kestirmeler uygulamasında, Anımsatıcılar'ı her kapattığınızda kadranı yenileyen tek bir otomasyon kurun, hepsi bu\n• Anında güncellemek için komplikasyona dokunun\n\n■ Verileriniz\n• Yalnızca iPhone'unuzdaki anımsatıcıları ve takvimleri kullanır. Uygulama kendine ait hiçbir şey saklamaz\n• Hesap yok. Reklam yok. Analiz yok\n• Tek uygulama içi satın alma, geliştiriciye kahve ısmarlamak için bir bahşiştir. Hiçbir şeyi değiştirmez\n\nBir Apple Watch ile eşlenmiş iPhone gerektirir."
+  "whatsNew": "• Bahşiş (bir kahve) kaldırıldı. Artık uygulama içi satın alma yok\n• Yerine geliştiricinin diğer uygulamalarına bir bağlantı eklendi",
+  "description": "TaskFace, yerleşik Anımsatıcılar uygulamasındaki en üstteki öğeleri Apple Watch kadranınızda sürekli gösterir.\n\nSırada ne yapacağınızı görmek için bileğinizi kaldırmanız yeterli. Anımsatıcılarınız olduğu yerde kalır: Siri ile ekleme, aygıtlar arasında eşzamanlama ve Anımsatıcılar uygulamasında görüntüleme eskisi gibi çalışır.\n\n■ Saat kadranınızda\n• En üstteki anımsatıcılarınızı (en fazla 4 satır) bir kadran komplikasyonunda gösterir\n• Desteklenen kadranlar: Modüler, Modüler Kompakt, Infograph Modüler\n• Yaklaşan takvim etkinliklerini de gösterin. Kaç satır olacağını ve bunların kaçının etkinliklere ayrılacağını seçin\n• Etkinlikler başladıktan sonra 1 saat kalır. Tüm gün etkinlikleri boş satırları doldurur. Resmî tatiller gösterilmez\n• Anımsatıcılar ve etkinlikler için 15 renk\n\n■ iPhone'da düzenleyin\n• Sıralamak için sürükleyin — sıra, Anımsatıcılar'ın kendisinde öncelik olarak kaydedilir\n• Doğrudan TaskFace'te ekleyin, tamamlayın ve yeniden adlandırın. Değişiklikler kadrana anında ulaşır\n• Apple Watch'ta bir öğeyi tamamladığınızda geri almak için 5 saniyeniz olur\n• Ana ekran widget'ı aynı listeyi gösterir\n\n■ Her zaman güncel\n• Kestirmeler uygulamasında, Anımsatıcılar'ı her kapattığınızda kadranı yenileyen tek bir otomasyon kurun, hepsi bu\n• Anında güncellemek için komplikasyona dokunun\n\n■ Verileriniz\n• Yalnızca iPhone'unuzdaki anımsatıcıları ve takvimleri kullanır. Uygulama kendine ait hiçbir şey saklamaz\n• Hesap yok. Reklam yok. Analiz yok\n• Uygulama internete hiç bağlanmaz. Veriler cihazlarınızdan çıkmaz\n\nBir Apple Watch ile eşlenmiş iPhone gerektirir."
  },
  "iap": {
   "name": "Bir Kahve",
