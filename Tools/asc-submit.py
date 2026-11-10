@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""版にビルドを紐づけて審査に出す。課金の未審査の説明も一緒に出す。
+"""版にビルドを紐づけて審査に出す。
+
+1.4 で投げ銭をやめたので、課金の提出は入れていない（課金 6809464583 は販売停止済み）。
 
     python3 Tools/asc-submit.py 1.2 6
 
@@ -14,7 +16,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import asc  # noqa: E402
 
 APP = "6809464254"
-IAP = "6809464583"
 
 
 def call(method, path, body=None, ok_codes=()):
@@ -64,12 +65,6 @@ def main(vs, build_no):
     call("PATCH", f"/v1/reviewSubmissions/{sub}", {"data": {
         "type": "reviewSubmissions", "id": sub, "attributes": {"submitted": True}}})
     print("審査に出した")
-
-    # 課金の説明（新しく足した言語）の審査。承認済みの課金なので、版と別に出せる
-    status, d = call("POST", "/v1/inAppPurchaseSubmissions", {"data": {
-        "type": "inAppPurchaseSubmissions",
-        "relationships": {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": IAP}}}}}, ok_codes=(409,))
-    print("課金の説明を審査に出した" if status < 300 else "課金の提出は不要または不可: " + json.dumps(d, ensure_ascii=False)[:400])
 
     _, d = call("GET", f"/v1/appStoreVersions/{v['id']}")
     print("版の状態:", d["data"]["attributes"]["appStoreState"])
