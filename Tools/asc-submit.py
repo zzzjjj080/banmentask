@@ -21,7 +21,8 @@ APP = "6809464254"
 def call(method, path, body=None, ok_codes=()):
     status, data = asc.call(method, path, json.dumps(body) if body is not None else None)
     if not 200 <= status < 300 and status not in ok_codes:
-        raise SystemExit(f"{method} {path} → HTTP {status}\n{json.dumps(data, ensure_ascii=False, indent=1)[:2500]}")
+        # 409 は meta.associatedErrors に本当の理由が入っている。切らずに全部出す（引き継ぎ書 4-215）
+        raise SystemExit(f"{method} {path} → HTTP {status}\n{json.dumps(data, ensure_ascii=False, indent=1)}")
     return status, data
 
 
