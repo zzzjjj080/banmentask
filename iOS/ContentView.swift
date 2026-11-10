@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 純正リマインダーの「文字盤向けフロントエンド」。
 /// 見た目は文字盤に合わせて黒地に白。タスク → 接続の状態 → 文字盤プレビューの順。
@@ -16,7 +17,7 @@ struct ContentView: View {
     @State private var newTitle = ""
     @FocusState private var addFocused: Bool
 
-    // 完了は猶予つき。○を押すと打ち消し線になり、5秒後に本当に完了する。その間にもう一度押せば取り消し
+    // 完了は猶予つき。○を押すと打ち消し線になり、猶予のあと本当に完了する。その間にもう一度押せば取り消し
     @State private var pending: [String: Task<Void, Never>] = [:]
     @State private var pendingSince: [String: Date] = [:]
     private let completionGrace: TimeInterval = PendingStore.grace
@@ -128,6 +129,7 @@ struct ContentView: View {
                 session.refresh()
                 Task { await source.reload() }
             case .background:
+                flushPendingCompletions()
                 BackgroundRefresh.schedule()
             default:
                 break
@@ -394,7 +396,7 @@ struct ContentView: View {
         .frame(width: WatchMockView.size.width * Self.mockScale)
     }
 
-    // MARK: - タスク行（タップでその場編集、○は5秒の猶予つき完了）
+    // MARK: - タスク行（タップでその場編集、○は猶予つきの完了）
 
     /// いま文字盤に出ているリマインダーの id
     private var onFaceIDs: Set<String> {
@@ -446,7 +448,7 @@ struct ContentView: View {
         .padding(.vertical, 6)
     }
 
-    /// 完了までのカウントダウン。リングが5秒かけて減り、中に残り秒数。押せば取り消し
+    /// 完了までのカウントダウン。リングが猶予のあいだ減り、中に残り秒数。押せば取り消し
     private func countdown(for id: String) -> some View {
         HStack(spacing: 8) {
             Text("取り消し")
@@ -489,7 +491,25 @@ struct ContentView: View {
         Task { await source.rename(id: id, title: draft) }
     }
 
-    /// ○を押す → 5秒後に完了。その間にもう一度押すと取り消し。
+    /// 画面を離れたら、猶予の残りを待たずに完了させる。
+    /// 待っている間にアプリが眠らされると書き込みごと止まり、リマインダーが完了されないまま
+    /// ホーム画面ウィジェットも古いままになっていた（「2回目のタップでやっと消える」の正体）。
+    /// 画面を離れた時点で取り消す手立ては無いので、待つ意味もない
+    private func flushPendingCompletions() {
+        let ids = Array(pending.keys)
+        guard !ids.isEmpty else { return }
+        pending.values.forEach { $0.cancel() }
+        pending.removeAll()
+        pendingSince.removeAll()
+        let bg = UIApplication.shared.beginBackgroundTask(withName: "completion-flush")
+        Task {
+            for id in ids { await source.complete(id: id) }   // 書き込み → 読み直し → ウィジェットの描き直し
+            send(force: false, reason: String(localized: "画面"))
+            if bg != .invalid { UIApplication.shared.endBackgroundTask(bg) }
+        }
+    }
+
+    /// ○を押す → 猶予のあと完了。その間にもう一度押すと取り消し。
     private func toggleComplete(_ item: ReminderSource.Item) {
         if let task = pending.removeValue(forKey: item.id) {
             task.cancel()
@@ -500,6 +520,12 @@ struct ContentView: View {
         Haptic.success()
         pendingSince[item.id] = .now
         pending[item.id] = Task {
+            // 画面を離れても、猶予が明けて書き込むまでは眠らされないようにする。
+            // これが無いと、チェックしてすぐホーム画面に戻ったとき待ち時間ごと止まり、
+            // リマインダーが完了されないまま（＝ウィジェットも古いまま）だった。
+            // 次にウィジェットから開いた瞬間に続きが動くので「2回目で消える」ように見えていた
+            let bg = UIApplication.shared.beginBackgroundTask(withName: "completion-grace")
+            defer { if bg != .invalid { UIApplication.shared.endBackgroundTask(bg) } }
             try? await Task.sleep(for: .seconds(completionGrace))
             guard !Task.isCancelled else { return }
             await source.complete(id: item.id)

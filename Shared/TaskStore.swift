@@ -225,9 +225,10 @@ enum LayoutStore {
 
 // MARK: - 完了の猶予（iPhone のホームウィジェット用）
 
-/// ○を押してから完了するまでの5秒を、ウィジェット拡張の複数の呼び出しで共有する。
+/// ○を押してから完了するまでの猶予を、ウィジェット拡張の複数の呼び出しで共有する。
 enum PendingStore {
-    static let grace: TimeInterval = 5
+    /// ○を押してから完了するまでの猶予。2026-11-10 に5秒から3秒へ（本人判断・5秒は長すぎた）
+    static let grace: TimeInterval = 3
     private static let key = "pendingCompletions"
     private static var defaults: UserDefaults? { UserDefaults(suiteName: AppGroup.identifier) }
 
